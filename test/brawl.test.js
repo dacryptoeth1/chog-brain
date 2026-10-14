@@ -78,3 +78,8 @@ test('parseJson pulls JSON out of chatter', () => {
   assert.deepEqual(parseJson('here: {"a":1} done'), { a: 1 });
   assert.equal(parseJson('nope'), null);
 });
+
+test('stage directions and emojis are stripped; fillers are allowed', () => {
+  assert.equal(cleanLine('*laughs* Uh, come on bro 😂 (sigh) that was weak.'), 'Uh, come on bro that was weak.');
+  assert.equal(cleanLine('Ha! Bro, is that ALL you got?'), 'Ha! Bro, is that ALL you got?');
+});

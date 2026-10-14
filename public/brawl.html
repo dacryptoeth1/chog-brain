@@ -12,6 +12,7 @@
   h1 { margin:4px 0 8px; font-size:24px; } a { color:var(--mute); }
   .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px; }
   input { background:#120e24; border:1px solid var(--line); color:var(--ink); border-radius:10px; padding:10px; width:96px; font-size:16px; }
+  select { background:#120e24; border:1px solid var(--line); color:var(--ink); border-radius:10px; padding:9px; font-size:14px; max-width:44vw; }
   button { background:var(--pri); color:#fff; border:0; border-radius:10px; padding:10px 14px; font-size:16px; cursor:pointer; }
   button.ghost { background:transparent; border:1px solid var(--line); color:var(--ink); }
   button:disabled { opacity:.5; cursor:default; }
@@ -100,6 +101,10 @@
     <button id="fight">Fight!</button>
     <button id="mute" class="ghost" aria-pressed="false">Sound: on</button>
   </div>
+  <div class="row">
+    <label>Left voice <select id="vL"></select></label>
+    <label>Right voice <select id="vR"></select></label>
+  </div>
   <p class="note" id="status"></p>
   <p class="credits">Audio credits: all sound effects (punch, hit, whoosh, crowd, round ding, KO) are generated live in your browser with the Web Audio API, so no third-party audio files or licences are involved. Voices come from your browser's built-in speech synthesis. No pain or crying sounds are used.</p>
 </main>
@@ -145,38 +150,97 @@ const sfx = (() => {
   };
 })();
 
-// ---- voices: speechSynthesis, one distinct profile per Chog --------------------------------
+// ---- voices: speechSynthesis, ranked natural voices, phrase-by-phrase delivery ----------------
 const tts = (() => {
   const ok = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
-  let voices = [];
-  const load = () => { voices = ok ? speechSynthesis.getVoices().filter((v) => /^en/i.test(v.lang)) : []; if (ok && !voices.length) voices = speechSynthesis.getVoices(); };
-  if (ok) { load(); speechSynthesis.addEventListener?.('voiceschanged', load); }
-  // Different voice per Chog; if the picks collide, the second takes the next voice.
-  const voiceFor = (profile, slot) => {
-    if (!voices.length) return null;
-    let i = profile.pick % voices.length;
-    if (slot === 1 && voices.length > 1 && i === current.voiceIdx[0]) i = (i + 1) % voices.length;
-    current.voiceIdx[slot] = i; return voices[i];
+  const KEY = 'chog-brawl-voices';
+  const FEMALE = /\b(aria|jenny|zira|samantha|female|libby|sonia|hazel|susan|karen|moira|tessa|fiona|victoria|emma|michelle|ana|natasha|clara|nova|allison|ava|jane|sara)\b/i;
+  const MALE = /\b(guy|davis|david|mark|ryan|daniel|alex|fred|tom|male|eric|christopher|roger|steffan|brian|andrew|liam|james|george|oliver|arthur|jason)\b/i;
+  const gender = (v) => (FEMALE.test(v.name) ? 'f' : MALE.test(v.name) ? 'm' : '?');
+  const natural = (v) => /natural|neural|online|google/i.test(v.name);
+  const score = (v) => (/natural|neural|online/i.test(v.name) ? 100 : 0) + (/google/i.test(v.name) ? 50 : 0) + (v.localService ? 0 : 10) + (/^en-(US|GB)/i.test(v.lang) ? 5 : 0);
+  let voices = [], saved = {}, gen = 0; // gen changes whenever speech is stopped, so a pending phrase loop exits
+  try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch {}
+  const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch {} };
+  const key = (v) => v.voiceURI || v.name;
+  const load = () => {
+    if (!ok) return;
+    const all = speechSynthesis.getVoices(), en = all.filter((v) => /^en/i.test(v.lang));
+    voices = (en.length ? en : all).slice().sort((a, b) => score(b) - score(a) || a.name.localeCompare(b.name));
+    fillPickers();
   };
+  // Auto pick: best-ranked tier, a different voice per fighter, opposite genders when we can tell them apart.
+  function autoPick(profile, slot) {
+    if (!voices.length) return null;
+    const top = score(voices[0]), min = top >= 100 ? 100 : top >= 50 ? 50 : 0;
+    const pool = voices.filter((v) => score(v) >= min);
+    const first = pool[current.fighters[0].voice.pick % pool.length];
+    if (slot === 0) return first;
+    const rest = pool.filter((v) => v !== first);
+    const opposite = rest.filter((v) => gender(v) !== '?' && gender(first) !== '?' && gender(v) !== gender(first));
+    const from = opposite.length ? opposite : rest.length ? rest : voices.filter((v) => v !== first);
+    return from.length ? from[profile.pick % from.length] : first;
+  }
+  const voiceFor = (profile, slot) => {
+    const want = saved[slot === 0 ? 'L' : 'R'];
+    return (want && voices.find((v) => key(v) === want)) || (current ? autoPick(profile, slot) : voices[0] || null);
+  };
+  function fillPickers() {
+    for (const [id, k] of [['vL', 'L'], ['vR', 'R']]) {
+      const s = $(id); if (!s) continue;
+      s.innerHTML = '<option value="">Auto (best match)</option>' + voices.map((v) => `<option value="${key(v).replace(/"/g, '&quot;')}">${natural(v) ? '★ ' : ''}${v.name} (${v.lang})</option>`).join('');
+      s.value = saved[k] && voices.some((v) => key(v) === saved[k]) ? saved[k] : '';
+    }
+  }
+  // Never read stage directions (*laughs*, (sigh), [pause]) or emojis aloud.
+  const sanitize = (t) => t.replace(/\*[^*]*\*|\([^)]*\)|\[[^\]]*\]/g, ' ').replace(/[\p{Extended_Pictographic}‍️]/gu, '').replace(/[*_~#]/g, '').replace(/\s+/g, ' ').trim();
+  // Short phrases at punctuation; a one-word fragment ("Uh,") stays attached to the next phrase.
+  const phrases = (t) => {
+    const out = [];
+    for (const p of t.split(/(?<=[,;:.!?…—])\s+/)) {
+      if (out.length && out[out.length - 1].split(' ').length < 2) out[out.length - 1] += ' ' + p; else out.push(p);
+    }
+    return out;
+  };
+  const jitter = (pct) => 1 + (Math.random() * 2 - 1) * pct;
+  const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
+  const settle = async () => { for (let i = 0; i < 20 && speechSynthesis.speaking; i++) await wait(50); };
+  function one(text, v, pitch, rate, volume) {
+    return new Promise((resolve) => {
+      const u = new SpeechSynthesisUtterance(text);
+      if (v) { u.voice = v; u.lang = v.lang; }
+      u.pitch = pitch; u.rate = rate; u.volume = volume;
+      let fin = false;
+      const done = (cut) => { if (fin) return; fin = true; clearTimeout(timer); if (cut) speechSynthesis.cancel(); resolve(); };
+      const timer = setTimeout(() => done(true), 1500 + text.split(' ').length * 700); // some browsers never fire onend; cancel so lines can't overlap
+      u.onend = () => done(false); u.onerror = () => done(false);
+      speechSynthesis.speak(u);
+    });
+  }
   return {
-    ok,
+    ok, sanitize, phrases, refresh: load,
+    choose(k, v) { if (v) saved[k] = v; else delete saved[k]; persist(); },
     // A silent utterance inside the click handler unlocks speech on browsers that block it until a user gesture.
     prime() { if (!ok) return; try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch {} },
-    stop() { if (ok) speechSynthesis.cancel(); },
-    say(text, profile, slot) {
-      if (!ok || muted) return Promise.resolve();
-      return new Promise((resolve) => {
-        const u = new SpeechSynthesisUtterance(text);
-        const v = voiceFor(profile, slot); if (v) { u.voice = v; u.lang = v.lang; }
-        u.pitch = profile.pitch; u.rate = profile.rate;
-        const done = () => { clearTimeout(timer); resolve(); };
-        const timer = setTimeout(done, 1800 + text.split(' ').length * 650); // some browsers never fire onend
-        u.onend = done; u.onerror = done;
-        speechSynthesis.speak(u);
-      });
+    stop() { gen++; if (ok) speechSynthesis.cancel(); },
+    async say(text, profile, slot) {
+      if (!ok || muted) return;
+      const my = gen, v = voiceFor(profile, slot), list = phrases(sanitize(text));
+      for (let i = 0; i < list.length; i++) {
+        if (muted || my !== gen) return;
+        const p = list[i];
+        const shout = /!/.test(p) || p.split(/\s+/).some((w) => /^[A-Z']{3,}[.,!?]*$/.test(w)); // "!" or an ALL-CAPS word
+        const question = /\?\s*$/.test(p);
+        const pitch = clamp(profile.pitch * jitter(0.08) * (question ? 1.12 : 1) * (shout ? 1.05 : 1), 0.1, 2); // +-8%, rises on questions
+        const rate = clamp(profile.rate * jitter(0.10) * (shout ? 1.1 : 1), 0.5, 2); // +-10%, faster when shouting
+        await settle();
+        await one(p, v, pitch, rate, shout ? 1 : 0.85);
+        if (i < list.length - 1) await wait(150 + Math.random() * 150); // 150-300ms, varied
+      }
     },
   };
 })();
+if (tts.ok) { tts.refresh(); speechSynthesis.addEventListener?.('voiceschanged', tts.refresh); }
 
 // ---- stage helpers -------------------------------------------------------------------------
 const side = (id) => (current.fighters[0].id === id ? 'L' : 'R');
@@ -229,7 +293,7 @@ async function speak(line, label) {
   const sd = side(line.who), prof = current.fighters[slotOf(line.who)];
   const b = $('b' + sd), other = $('b' + (sd === 'L' ? 'R' : 'L'));
   other.classList.remove('show');
-  b.innerHTML = '<small></small><span></span>'; b.firstChild.textContent = `Chog #${line.who} · ${prof.temperament}`; b.lastChild.textContent = line.text;
+  b.innerHTML = '<small></small><span></span>'; b.firstChild.textContent = `Chog #${line.who} · ${prof.temperament}`; b.lastChild.textContent = tts.sanitize(line.text);
   b.classList.add('show'); fEl(line.who).classList.add('talk');
   const t0 = Date.now();
   await tts.say(line.text, prof.voice, slotOf(line.who));
@@ -264,8 +328,9 @@ async function run(a, b, nonce) {
       sfx.ding(); await banner(`ROUND ${rd.n}`);
       await animateRound(rd);
       if (rd.kind === 'ko') { sfx.ko(); banner('KO!', true); }
-      for (const line of rd.lines) await speak(line);
-      await wait(250);
+      await wait(350 + Math.random() * 250); // reaction gap: let the hit and the crowd land first
+      for (const line of rd.lines) { await speak(line); await wait(300 + Math.random() * 200); } // one voice at a time
+      await wait(150);
     }
     ['bL', 'bR'].forEach((k) => $(k).classList.remove('show'));
     const w = current.fighters.find((f) => f.id === current.winner);
@@ -284,6 +349,12 @@ const nonce = () => Math.random().toString(36).slice(2, 10);
 $('fight').onclick = () => run($('ida').value, $('idb').value, nonce());
 $('rand').onclick = () => { const a = rnd(); let b = rnd(); if (b === a) b = (a + 1) % 1969; $('ida').value = a; $('idb').value = b; run(a, b, nonce()); };
 $('rematch').onclick = () => lastPair && run(lastPair[0], lastPair[1], nonce());
+for (const [id, k] of [['vL', 'L'], ['vR', 'R']]) {
+  $(id).onchange = (e) => {
+    tts.choose(k, e.target.value);
+    if (!muted && tts.ok && !busy) { tts.stop(); sfx.unlock(); tts.prime(); tts.say('Come on, is this my voice?', { pitch: 1, rate: 1 }, k === 'L' ? 0 : 1); }
+  };
+}
 $('again').onclick = () => { $('over').classList.remove('show'); tts.stop(); };
 $('mute').onclick = () => {
   muted = !muted; $('mute').textContent = 'Sound: ' + (muted ? 'off' : 'on'); $('mute').setAttribute('aria-pressed', muted);
