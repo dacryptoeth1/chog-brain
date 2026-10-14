@@ -1,22 +1,18 @@
 import express from 'express';
-import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Anthropic from '@anthropic-ai/sdk';
 import { buildBrain, normalizeTraits, runDuel, templateNarration } from './lib/brain.js';
 import { loadChog, ownerOf, chainStatus, fetchImage, MAX_ID, CHOG_CONTRACT } from './lib/chain.js';
 import { artFor } from './lib/art.js';
+import { createStore } from './lib/store.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, 'data.json');
 const PORT = process.env.PORT || 3000;
 const llm = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
 
-// ---- tiny JSON store: progression is keyed by token ID (the NFT is the save file)
-function readStore() {
-  try { return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); } catch { return {}; }
-}
-function writeStore(s) { fs.writeFileSync(DATA_FILE, JSON.stringify(s, null, 2)); }
+// Progression is keyed by token ID (the NFT is the save file). See lib/store.js.
+const store = createStore({ defaultFile: path.join(__dirname, 'data.json') });
 const today = () => new Date().toISOString().slice(0, 10);
 const blank = () => ({ xp: 0, wins: 0, losses: 0, lastRun: null, memory: [] });
 const levelOf = (xp) => 1 + Math.floor(Math.sqrt(xp / 20));
@@ -29,7 +25,7 @@ function validId(v) {
 async function fullChog(id, opts) {
   const nft = await loadChog(id, opts);
   const brain = buildBrain(id, normalizeTraits(nft.attributes));
-  const st = readStore()[id] || blank();
+  const st = (await store.get(id)) || blank();
   // Progression feeds back into the brain: levels add flat stats.
   const lvl = levelOf(st.xp);
   for (const k of Object.keys(brain.stats)) brain.stats[k] += lvl - 1;
@@ -67,7 +63,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/health', async (_req, res) =>
-  res.json({ ok: true, contract: CHOG_CONTRACT, narrator: llm ? 'llm' : 'template', chain: await chainStatus() }));
+  res.json({ ok: true, contract: CHOG_CONTRACT, narrator: llm ? 'llm' : 'template', chain: await chainStatus(), store: store.kind }));
 
 app.get('/api/chog/:id', async (req, res) => {
   const id = validId(req.params.id);
@@ -111,15 +107,13 @@ app.post('/api/duel', async (req, res) => {
   const duel = runDuel(A.brain, B.brain, today());
   const story = await narrate(A.brain, B.brain, duel);
 
-  const store = readStore();
-  for (const [id, won] of [[a, duel.winner === a], [b, duel.winner === b]]) {
-    const s = store[id] || blank();
+  await Promise.all([[a, duel.winner === a], [b, duel.winner === b]].map(async ([id, won]) => {
+    const s = (await store.get(id)) || blank();
     s.xp += won ? 30 : 10;
     won ? (s.wins += 1) : (s.losses += 1);
     s.memory = [...s.memory, `${today()}: ${won ? 'won' : 'lost'} vs #${id === a ? b : a}`].slice(-10);
-    store[id] = s;
-  }
-  writeStore(store);
+    await store.set(id, s);
+  }));
   res.json({ a: A.brain, b: B.brain, duel, narration: story.text, narratedBy: story.by });
 });
 
@@ -127,8 +121,7 @@ app.post('/api/duel', async (req, res) => {
 app.post('/api/expedition/:id', async (req, res) => {
   const id = validId(req.params.id);
   if (!id) return res.status(400).json({ error: `token id must be 0-${MAX_ID}` });
-  const store = readStore();
-  const s = store[id] || blank();
+  const s = (await store.get(id)) || blank();
   if (s.lastRun === today()) return res.status(429).json({ error: 'already ran today', next: 'tomorrow (UTC)' });
   const { brain } = await fullChog(id);
   const roll = (brain.stats.luck + brain.stats.charm) % 5;
@@ -137,9 +130,14 @@ app.post('/api/expedition/:id', async (req, res) => {
   s.xp += gain;
   s.lastRun = today();
   s.memory = [...s.memory, `${today()}: expedition, found ${finds[roll]}`].slice(-10);
-  store[id] = s;
-  writeStore(store);
+  await store.set(id, s);
   res.json({ found: finds[roll], xpGained: gain, level: levelOf(s.xp), temperament: brain.personality.temperament });
+});
+
+// Any unexpected error becomes a clean JSON response instead of an HTML error page.
+app.use((err, _req, res, _next) => {
+  console.error(err);
+  res.status(500).json({ error: 'server error, please try again' });
 });
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

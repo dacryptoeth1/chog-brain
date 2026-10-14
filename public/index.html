@@ -120,6 +120,7 @@ async function api(path, opts) {
 
 api('/api/health').then((h) => {
   if (!h.chain.reachable) $('wallet').insertAdjacentHTML('afterend', `<p class="note">Monad RPC unreachable from the server (${h.chain.reason}). Using seeded traits.</p>`);
+  if (h.store === 'ephemeral') $('wallet').insertAdjacentHTML('afterend', '<p class="note">No database connected: XP and levels reset when the server restarts.</p>');
 }).catch(() => {});
 
 $('connect').onclick = async () => {
