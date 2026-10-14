@@ -33,3 +33,12 @@ the app falls back to seeded traits and says why on screen.
 Stats, personality, signature move and sword are all derived from the token's traits; change any
 trait and the character changes (tested). Progression is keyed by token ID, so the NFT is the save
 file and moves with its owner.
+
+## Make NFTs load instantly
+
+Reading each Chog from Monad and IPFS at request time is slow. Download every Chog's traits once:
+
+    npm run snapshot     # a few minutes; safe to re-run, it resumes
+    git add . ; git commit -m "Add Chog snapshot" ; git push
+
+The server then reads traits from `data/chogs.json` with no network call, and the image route is cached at the edge.

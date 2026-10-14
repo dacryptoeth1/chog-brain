@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Anthropic from '@anthropic-ai/sdk';
 import { buildBrain, normalizeTraits, runDuel, templateNarration } from './lib/brain.js';
-import { loadChog, ownerOf, chainStatus, fetchImage, MAX_ID, CHOG_CONTRACT } from './lib/chain.js';
+import { loadChog, ownerOf, chainStatus, fetchImage, snapshotSize, MAX_ID, CHOG_CONTRACT } from './lib/chain.js';
 import { artFor } from './lib/art.js';
 import { createStore } from './lib/store.js';
 
@@ -63,7 +63,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/health', async (_req, res) =>
-  res.json({ ok: true, contract: CHOG_CONTRACT, narrator: llm ? 'llm' : 'template', chain: await chainStatus(), store: store.kind }));
+  res.json({ ok: true, contract: CHOG_CONTRACT, narrator: llm ? 'llm' : 'template', chain: await chainStatus(), store: store.kind, snapshot: snapshotSize() }));
 
 app.get('/api/chog/:id', async (req, res) => {
   const id = validId(req.params.id);
@@ -82,7 +82,8 @@ app.get('/api/chog/:id/image', async (req, res) => {
   if (!nft.imageRaw) return res.status(404).end();
   try {
     const img = await fetchImage(nft.imageRaw);
-    res.set('content-type', img.type).set('cache-control', 'public, max-age=86400').send(img.buf);
+    // Immutable art: browsers keep it a day, Vercel's edge keeps it a year, so each image is fetched once for everyone.
+    res.set('content-type', img.type).set('cache-control', 'public, max-age=86400, s-maxage=31536000, stale-while-revalidate=86400').send(img.buf);
   } catch {
     res.status(502).end();
   }

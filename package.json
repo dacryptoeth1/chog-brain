@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "snapshot": "node scripts/snapshot.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.134.0",

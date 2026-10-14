@@ -26,7 +26,7 @@
   .hero { display:flex; align-items:flex-end; gap:6px; margin-bottom:10px; }
   .portrait { position:relative; width:150px; height:150px; border-radius:14px; background:#120e24; overflow:hidden; flex:none; }
   .portrait .ph { position:absolute; inset:0; padding:12px; } .portrait .ph svg { width:100%; height:100%; }
-  .portrait img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .portrait img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity .35s; }
   .sword { height:190px; width:57px; transform:rotate(14deg); transform-origin:50% 90%; flex:none; margin-left:-4px; }
   .sword svg { display:block; width:57px; height:190px; }
   .sword.glow { filter:drop-shadow(0 0 8px #836ef9); }
@@ -95,7 +95,7 @@ function card(b, nft, p, art) {
     <div class="hero">
       <div class="portrait">
         <div class="art" style="position:absolute;inset:0">
-          <div class="ph">${ph}</div>${nft.image ? `<img src="${nft.image}" alt="Chog #${b.tokenId}" onerror="this.remove()">` : ''}
+          <div class="ph">${ph}</div>${nft.image ? `<img src="${nft.image}" alt="Chog #${b.tokenId}" decoding="async" onload="this.style.opacity=1" onerror="this.remove()">` : ''}
         </div>
         <div class="tears"><i class="tear"></i><i class="tear"></i><i class="tear"></i><i class="tear"></i></div>
       </div>
@@ -138,7 +138,7 @@ async function loadCards() {
 }
 
 $('load').onclick = async () => {
-  $('status').textContent = ''; verified = false; mood = {};
+  $('status').textContent = 'Loading Chogs from Monad…'; verified = false; mood = {};
   try {
     const mine = await loadCards();
     if (account) {
