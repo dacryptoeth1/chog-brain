@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chog Brain</title>
+<style>
+  :root { --bg:#0e0b1a; --card:#1a1530; --line:#2f2755; --ink:#f2eefc; --mute:#a99fcf; --pri:#836ef9; --ok:#4ade80; --warn:#fbbf24; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 system-ui,sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:16px; }
+  h1 { margin:8px 0 2px; font-size:28px; } .sub { color:var(--mute); margin:0 0 16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:14px; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  input { background:#120e24; border:1px solid var(--line); color:var(--ink); border-radius:10px; padding:10px; width:110px; font-size:16px; }
+  button { background:var(--pri); color:#fff; border:0; border-radius:10px; padding:10px 14px; font-size:16px; cursor:pointer; }
+  button.ghost { background:transparent; border:1px solid var(--line); color:var(--ink); }
+  button:disabled { opacity:.5; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; } @media(max-width:560px){ .grid{ grid-template-columns:1fr; } }
+  .bar { height:8px; background:#120e24; border-radius:6px; overflow:hidden; } .bar > i { display:block; height:100%; background:var(--pri); }
+  .stat { display:flex; justify-content:space-between; font-size:14px; color:var(--mute); margin-top:6px; }
+  .tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; } .tag { font-size:12px; background:#120e24; border:1px solid var(--line); border-radius:99px; padding:2px 8px; color:var(--mute); }
+  pre { white-space:pre-wrap; font:inherit; margin:0; }
+  .note { font-size:13px; color:var(--warn); } .good { color:var(--ok); }
+
+  .hero { display:flex; align-items:flex-end; gap:6px; margin-bottom:10px; }
+  .portrait { position:relative; width:150px; height:150px; border-radius:14px; background:#120e24; overflow:hidden; flex:none; }
+  .portrait .ph { position:absolute; inset:0; padding:12px; } .portrait .ph svg { width:100%; height:100%; }
+  .portrait img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .sword { height:190px; width:57px; transform:rotate(14deg); transform-origin:50% 90%; flex:none; margin-left:-4px; }
+  .sword svg { display:block; width:57px; height:190px; }
+  .sword.glow { filter:drop-shadow(0 0 8px #836ef9); }
+  .swordname { font-size:12px; color:var(--mute); margin:0 0 8px; }
+
+  /* Duel aftermath: loser cries, winner celebrates. Works on top of any art. */
+  .badge { display:none; font-size:12px; font-weight:600; border-radius:99px; padding:2px 10px; margin-left:6px; }
+  .tears { position:absolute; inset:0; pointer-events:none; display:none; }
+  .tear { position:absolute; width:9px; height:14px; background:#7dd3fc; border-radius:50% 50% 50% 50% / 62% 62% 38% 38%; opacity:0; animation:drip 1.2s ease-in infinite; }
+  .tear:nth-child(1){ left:34%; top:46%; } .tear:nth-child(2){ left:60%; top:46%; animation-delay:.3s; }
+  .tear:nth-child(3){ left:30%; top:50%; animation-delay:.6s; } .tear:nth-child(4){ left:64%; top:50%; animation-delay:.9s; }
+  @keyframes drip { 0%{ transform:translateY(0); opacity:0; } 15%{ opacity:.95; } 100%{ transform:translateY(62px); opacity:0; } }
+  @keyframes sob { 0%,100%{ transform:translateY(0) rotate(0); } 25%{ transform:translateY(2px) rotate(-1deg); } 75%{ transform:translateY(3px) rotate(1deg); } }
+  @keyframes hop { 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-8px); } }
+  .mood-cry .portrait { background:#0f1730; }
+  .mood-cry .portrait img { filter:saturate(.55) brightness(.82) hue-rotate(-12deg); }
+  .mood-cry .portrait .art { animation:sob 1.4s ease-in-out infinite; }
+  .mood-cry .tears { display:block; }
+  .mood-cry .badge.lose { display:inline-block; background:#0f2a44; color:#7dd3fc; }
+  .mood-win .portrait { box-shadow:0 0 0 2px var(--ok), 0 0 18px #4ade8066; }
+  .mood-win .portrait .art { animation:hop .7s ease-in-out 3; }
+  .mood-win .badge.win { display:inline-block; background:#0f3a24; color:var(--ok); }
+  @media (prefers-reduced-motion: reduce) { .tear, .mood-cry .portrait .art, .mood-win .portrait .art { animation:none; } .tear { opacity:.9; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Chog Brain</h1>
+  <p class="sub">Your Chog Genesis NFT is a living character. Its traits decide its personality and stats.</p>
+
+  <div class="card">
+    <div class="row">
+      <button id="connect" class="ghost">Connect wallet</button>
+      <span id="wallet" class="sub" style="margin:0">Not connected (demo mode: any token id works)</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <label>Your Chog # <input id="mine" type="number" min="0" max="1968" value="1"></label>
+      <label>Opponent # <input id="foe" type="number" min="0" max="1968" value="2"></label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button id="load">Load Chogs</button>
+      <button id="duel" disabled>Start duel</button>
+      <button id="run" class="ghost" disabled>Daily expedition</button>
+    </div>
+    <p id="status" class="note"></p>
+  </div>
+
+  <div id="fighters" class="grid"></div>
+  <div id="story" class="card" style="display:none"><pre id="storyText"></pre><p id="by" class="sub"></p></div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+let account = null, verified = false;
+let mood = {}; // tokenId -> 'win' | 'cry', set after a duel
+
+function card(b, nft, p, art) {
+  const m = mood[b.tokenId] || '';
+  const stats = Object.entries(b.stats).map(([k, v]) =>
+    `<div class="stat"><span>${k}</span><span>${v}</span></div><div class="bar"><i style="width:${Math.min(100, v * 3)}%"></i></div>`).join('');
+  const tags = Object.entries(b.traits).slice(0, 8).map(([k, v]) => `<span class="tag">${k}: ${v}</span>`).join('');
+  const ph = m === 'cry' ? art.placeholderCry : art.placeholder;
+  return `<div class="card ${m ? 'mood-' + m : ''}">
+    <div class="hero">
+      <div class="portrait">
+        <div class="art" style="position:absolute;inset:0">
+          <div class="ph">${ph}</div>${nft.image ? `<img src="${nft.image}" alt="Chog #${b.tokenId}" onerror="this.remove()">` : ''}
+        </div>
+        <div class="tears"><i class="tear"></i><i class="tear"></i><i class="tear"></i><i class="tear"></i></div>
+      </div>
+      <div class="sword ${art.sword.glow ? 'glow' : ''}">${art.sword.svg}</div>
+    </div>
+    <p class="swordname">Sword: ${art.sword.name}</p>
+    <strong>Chog #${b.tokenId}</strong> · Lv ${p.level} · ${b.personality.temperament}
+    <span class="badge win">Winner</span><span class="badge lose">Defeated</span>
+    <div class="sub" style="margin:0">${b.personality.quirk}</div>
+    <div class="stat"><span>HP</span><span>${b.hp}</span></div>${stats}
+    <div class="stat"><span>Signature</span><span>${b.signatureMove}</span></div>
+    <div class="stat"><span>Record</span><span>${p.wins}W / ${p.losses}L · ${p.xp} XP</span></div>
+    <div class="tags">${tags}</div>
+    ${nft.source === 'fallback' ? `<p class="note">Showing seeded traits and placeholder art. Chain read failed at ${nft.reason || 'an unknown step'}.</p>` : ''}
+  </div>`;
+}
+
+async function api(path, opts) {
+  const r = await fetch(path, opts && { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(opts) });
+  const j = await r.json(); if (!r.ok) throw new Error(j.error || 'request failed'); return j;
+}
+
+api('/api/health').then((h) => {
+  if (!h.chain.reachable) $('wallet').insertAdjacentHTML('afterend', `<p class="note">Monad RPC unreachable from the server (${h.chain.reason}). Using seeded traits.</p>`);
+}).catch(() => {});
+
+$('connect').onclick = async () => {
+  if (!window.ethereum) { $('wallet').textContent = 'No wallet found. Demo mode still works.'; return; }
+  const [a] = await window.ethereum.request({ method: 'eth_requestAccounts' });
+  account = a; $('wallet').textContent = a.slice(0, 6) + '…' + a.slice(-4);
+};
+
+async function loadCards() {
+  const mine = $('mine').value, foe = $('foe').value;
+  const [A, B] = await Promise.all([api('/api/chog/' + mine), api('/api/chog/' + foe)]);
+  if (!A.art || !B.art) throw new Error('The app running in PowerShell is an old copy. Press Ctrl+C there, run npm start again, then refresh.');
+  $('fighters').innerHTML = card(A.brain, A.nft, A.progress, A.art) + card(B.brain, B.nft, B.progress, B.art);
+  return mine;
+}
+
+$('load').onclick = async () => {
+  $('status').textContent = ''; verified = false; mood = {};
+  try {
+    const mine = await loadCards();
+    if (account) {
+      const v = await api('/api/verify', { tokenId: mine, address: account });
+      verified = v.verified;
+      $('status').innerHTML = v.verified ? '<span class="good">Ownership verified onchain.</span>' : 'Not verified as owner (' + (v.reason || 'wallet does not own this token') + '). Playing in demo mode.';
+    } else { $('status').textContent = 'Demo mode: connect a wallet that owns the Chog for verified play.'; }
+    $('duel').disabled = false; $('run').disabled = false;
+  } catch (e) { $('status').textContent = e.message; }
+};
+
+$('duel').onclick = async () => {
+  $('duel').disabled = true; $('status').textContent = 'Fighting…';
+  try {
+    const a = $('mine').value, b = $('foe').value;
+    const r = await api('/api/duel', { a, b });
+    $('story').style.display = 'block'; $('storyText').textContent = r.narration;
+    $('by').textContent = 'Narrated by ' + (r.narratedBy === 'llm' ? 'Claude' : 'built-in commentator') + ' · winner: Chog #' + r.duel.winner;
+    const loser = r.duel.winner === a ? b : a;
+    mood = { [r.duel.winner]: 'win', [loser]: 'cry' };
+    await loadCards();
+    $('status').innerHTML = `<span class="good">Chog #${r.duel.winner} wins.</span> Chog #${loser} is crying.`;
+  } catch (e) { $('status').textContent = e.message; }
+  $('duel').disabled = false;
+};
+
+$('run').onclick = async () => {
+  try {
+    const r = await api('/api/expedition/' + $('mine').value, {});
+    $('status').innerHTML = `<span class="good">Your ${r.temperament} Chog found ${r.found}. +${r.xpGained} XP (Lv ${r.level}).</span>`;
+    setTimeout(() => loadCards().catch(() => {}), 1200);
+  } catch (e) { $('status').textContent = e.message; }
+};
+</script>
+</body>
+</html>
