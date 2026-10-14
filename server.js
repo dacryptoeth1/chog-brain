@@ -5,6 +5,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { buildBrain, normalizeTraits, runDuel, templateNarration } from './lib/brain.js';
 import { loadChog, ownerOf, chainStatus, fetchImage, snapshotSize, MAX_ID, CHOG_CONTRACT } from './lib/chain.js';
 import { artFor } from './lib/art.js';
+import { planBrawl, writeScript, voiceFor } from './lib/brawl.js';
 import { createStore } from './lib/store.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -116,6 +117,31 @@ app.post('/api/duel', async (req, res) => {
     await store.set(id, s);
   }));
   res.json({ a: A.brain, b: B.brain, duel, narration: story.text, narratedBy: story.by });
+});
+
+// Rage Bait Brawl: a 6-8 round fight with trash talk per round. The AI key stays on the server;
+// without it (or if the model misbehaves) canned lines are used. No XP is awarded for brawls.
+app.post('/api/brawl', async (req, res) => {
+  const a = validId(req.body?.a);
+  const b = validId(req.body?.b);
+  if (!a || !b || a === b) return res.status(400).json({ error: 'two different valid token ids required' });
+  const nonce = String(req.body?.nonce || '').replace(/[^a-z0-9]/gi, '').slice(0, 16);
+  const [A, B] = await Promise.all([fullChog(a), fullChog(b)]);
+  const plan = planBrawl(A.brain, B.brain, nonce || today());
+  const script = await writeScript(llm, A.brain, B.brain, plan, process.env.NARRATOR_MODEL || 'claude-haiku-5-5');
+  const va = voiceFor(A.brain);
+  const fighters = [[A, va], [B, voiceFor(B.brain, va)]].map(([f, voice]) => ({
+    id: f.brain.tokenId,
+    temperament: f.brain.personality.temperament,
+    quirk: f.brain.personality.quirk,
+    signatureMove: f.brain.signatureMove,
+    background: f.brain.traits.Background || null,
+    hp: f.brain.hp,
+    image: f.nft.imageRaw ? `/api/chog/${f.brain.tokenId}/image` : null,
+    placeholder: artFor(f.brain).placeholder,
+    voice,
+  }));
+  res.json({ fighters, winner: plan.winner, rounds: script.rounds, taunt: script.taunt, by: script.by });
 });
 
 // Daily expedition: one per Chog per UTC day. Outcome depends on the brain.

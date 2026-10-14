@@ -17,6 +17,15 @@ See `.env.example` for optional settings. Demo mode works with any token id 0-19
 that owns the token for onchain-verified play. If the Monad RPC or metadata host can't be reached,
 the app falls back to seeded traits and says why on screen.
 
+## Rage Bait Brawl
+
+Open `/brawl.html` (or the button on the home page). Two Chogs fight 6-8 rounds and trash-talk each other in a
+16:9 stage built for screen recording. Lines come from `POST /api/brawl`: Claude writes them on the server
+(same `ANTHROPIC_API_KEY`, never sent to the browser); with no key, or if a line is too long or unsafe, a
+canned line is used. Voices use the browser's `speechSynthesis` (pitch, rate and voice picked from the traits),
+so no key is needed. Sounds (punch, hit, whoosh, crowd, ding, KO) are synthesized with Web Audio, so there are no
+audio files or licences to credit. There are no pain or crying sounds.
+
 ## Deploy on Vercel
 
 1. Push this repo to GitHub.
