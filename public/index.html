@@ -97,17 +97,13 @@
   .hp i { position:absolute; inset:0 auto 0 0; width:100%; background:var(--ok); transition:width .5s ease, background .3s; }
   .hudbar.e .hp i { inset:0 0 0 auto; }
   .hp span { position:absolute; inset:0; text-align:center; font-size:11px; line-height:12px; font-weight:800; color:#fff; text-shadow:0 1px 2px #000; }
-  .sprite { position:absolute; bottom:20%; width:30%; z-index:3; }
+  .sprite { position:absolute; bottom:19%; width:30%; z-index:3; }
   .sprite.p { left:9%; } .sprite.e { right:9%; }
   .sprite:after { content:""; position:absolute; left:6%; right:6%; bottom:-9px; height:11px; background:#0007; border-radius:50%; filter:blur(2px); z-index:-1; }
   .stagebox { position:relative; transition:transform .2s ease-out; }
   .stagebox .portrait { width:100%; height:auto; aspect-ratio:1/1; border-radius:14px; border:3px solid #fff; box-shadow:0 5px 0 #0006; animation:bob 1.8s ease-in-out infinite; }
   .sprite.e .stagebox .portrait { animation-delay:.9s; border-color:#ffd1e3; }
-  .sprite.e .portrait img { transform:scaleX(-1); }
   @keyframes bob { 0%,100%{ translate:0 0; } 50%{ translate:0 -3px; } }
-  .stagebox .sword { position:absolute; bottom:4%; height:84%; width:auto; aspect-ratio:60/200; margin:0; }
-  .sprite.p .stagebox .sword { right:-17%; transform:rotate(20deg); transform-origin:50% 90%; }
-  .sprite.e .stagebox .sword { left:-17%; transform:scaleX(-1) rotate(20deg); transform-origin:50% 90%; }
   .fx { position:absolute; inset:0; pointer-events:none; overflow:visible; }
   .float { position:absolute; left:50%; top:20%; transform:translateX(-50%); font-weight:900; font-size:26px; color:#fff; text-shadow:0 2px 0 #000,0 0 8px #000; animation:floatup 1s ease-out forwards; white-space:nowrap; z-index:8; }
   .float.crit { color:var(--gold); font-size:34px; } .float.heal { color:var(--ok); } .float.miss, .float.block { color:#cbd5e1; font-size:18px; }
@@ -117,7 +113,6 @@
   @keyframes hurt { 0%,100%{ transform:translateX(0); } 20%{ transform:translateX(-7px); } 40%{ transform:translateX(7px); } 60%{ transform:translateX(-5px); } 80%{ transform:translateX(5px); } }
   .hurt { animation:hurt .35s; } .hurt .portrait { filter:brightness(1.9) saturate(1.4); }
   .shield .portrait { box-shadow:0 0 0 3px #7dd3fc, 0 0 22px #7dd3fcaa; }
-  .dead .stagebox .sword { opacity:.35; }
   .flash { animation:flash .4s; } @keyframes flash { 0%{ box-shadow:0 0 0 0 #ffd166; } 100%{ box-shadow:0 0 0 0 transparent; } }
   .burst { position:absolute; left:50%; top:40%; width:70px; height:70px; margin:-35px 0 0 -35px; z-index:7; animation:burst .4s ease-out forwards;
     background:conic-gradient(from 0deg,#fff 0 8deg,transparent 8deg 30deg,#ffd166 30deg 38deg,transparent 38deg 60deg,#fff 60deg 68deg,transparent 68deg 90deg,#ffd166 90deg 98deg,transparent 98deg 120deg,#fff 120deg 128deg,transparent 128deg 150deg,#ffd166 150deg 158deg,transparent 158deg 180deg,#fff 180deg 188deg,transparent 188deg 210deg,#ffd166 210deg 218deg,transparent 218deg 240deg,#fff 240deg 248deg,transparent 248deg 270deg,#ffd166 270deg 278deg,transparent 278deg 300deg,#fff 300deg 308deg,transparent 308deg 330deg,#ffd166 330deg 338deg,transparent 338deg);
@@ -130,6 +125,69 @@
   .beam.bp { left:34%; width:34%; transform-origin:left; } .beam.be { right:34%; width:34%; transform-origin:right; background:linear-gradient(270deg,#fff,#ff6bd6 40%,#e0457b); box-shadow:0 0 18px #ff6bd6,0 0 36px #e0457b; }
   @keyframes beam { 0%{ transform:scaleX(0); opacity:1; } 55%{ transform:scaleX(1); opacity:1; } 100%{ transform:scaleX(1); opacity:0; } }
   .shake { animation:shake .3s; } @keyframes shake { 0%,100%{ transform:translate(0); } 25%{ transform:translate(-4px,2px); } 50%{ transform:translate(4px,-2px); } 75%{ transform:translate(-3px,-1px); } }
+
+  /* character moves: jump, punch, beam, dodge */
+  .jumping .stagebox { animation:jump .7s cubic-bezier(.3,.6,.4,1); }
+  @keyframes jump { 0%{ translate:0 0; rotate:0deg; } 18%{ translate:0 4%; } 50%{ translate:0 -62%; rotate:-6deg; } 80%{ translate:0 -62%; } 100%{ translate:0 0; rotate:0deg; } }
+  .dodge.p .stagebox { animation:dodgeP .48s ease-out; } .dodge.e .stagebox { animation:dodgeE .48s ease-out; }
+  @keyframes dodgeP { 0%,100%{ translate:0 0; rotate:0deg; } 40%{ translate:-34% -34%; rotate:-14deg; } 70%{ translate:-20% -8%; rotate:-6deg; } }
+  @keyframes dodgeE { 0%,100%{ translate:0 0; rotate:0deg; } 40%{ translate:34% -34%; rotate:14deg; } 70%{ translate:20% -8%; rotate:6deg; } }
+  .knock.p .stagebox { animation:knockP .4s ease-out; } .knock.e .stagebox { animation:knockE .4s ease-out; }
+  @keyframes knockP { 0%,100%{ translate:0 0; rotate:0deg; } 30%{ translate:-16% -6%; rotate:-9deg; } }
+  @keyframes knockE { 0%,100%{ translate:0 0; rotate:0deg; } 30%{ translate:16% -6%; rotate:9deg; } }
+  .crouch .stagebox { transform:scaleY(.86) scaleX(1.05); transform-origin:50% 100%; }
+  .sprite.mood-win .stagebox { animation:joy .55s ease-out 3; }
+  @keyframes joy { 0%,100%{ translate:0 0; } 45%{ translate:0 -42%; } }
+  .fist { display:none; position:absolute; top:30%; width:38%; aspect-ratio:1/1; border-radius:50%; z-index:6; opacity:0;
+    background:radial-gradient(circle at 35% 28%,#ff9aa5,#e0263f 55%,#8a1127); border:3px solid #2a0a12; box-shadow:0 3px 0 #0007; }
+  .fist:before { content:""; position:absolute; top:22%; width:44%; height:56%; background:#fff; border:3px solid #2a0a12; border-radius:6px; }
+  .fist.p { left:70%; animation:punchP .36s ease-out forwards; } .fist.p:before { right:92%; }
+  .fist.e { right:70%; animation:punchE .36s ease-out forwards; } .fist.e:before { left:92%; }
+  .fist.crit { width:48%; background:radial-gradient(circle at 35% 28%,#fff3b0,#ffc233 55%,#c27a00); box-shadow:0 0 18px #ffd166, 0 3px 0 #0007; }
+  @keyframes punchP { 0%{ transform:translateX(-60%) scale(.5); opacity:0; } 35%{ transform:translateX(30%) scale(1.25); opacity:1; } 100%{ transform:translateX(10%) scale(1); opacity:0; } }
+  @keyframes punchE { 0%{ transform:translateX(60%) scale(.5); opacity:0; } 35%{ transform:translateX(-30%) scale(1.25); opacity:1; } 100%{ transform:translateX(-10%) scale(1); opacity:0; } }
+  .charge { position:absolute; top:36%; width:46%; aspect-ratio:1/1; border-radius:50%; z-index:6; background:radial-gradient(circle,#fff 0 20%,#e08bff 45%,#836ef9aa 70%,transparent 72%); animation:charge .5s ease-in forwards; filter:drop-shadow(0 0 10px #c154e6); }
+  .charge.p { left:72%; } .charge.e { right:72%; background:radial-gradient(circle,#fff 0 20%,#ff8fc9 45%,#e0457baa 70%,transparent 72%); filter:drop-shadow(0 0 10px #ff6bd6); }
+  @keyframes charge { 0%{ transform:scale(.2); opacity:0; } 60%{ transform:scale(1); opacity:1; } 100%{ transform:scale(1.4); opacity:0; } }
+  .beam { top:40%; height:11%; }
+
+  /* fighter body: the real NFT is the head, the body is a generic rigged fighter coloured from the token's traits */
+  .sprite { container-type:inline-size; }
+  .fig { position:relative; width:100%; aspect-ratio:1/1.5; }
+  .sprite.e .fig { transform:scaleX(-1); }
+  .sprite.glowy .fig { filter:drop-shadow(0 0 9px #836ef9); }
+  .fig .portrait.head { position:absolute; left:17%; top:0; width:66%; height:auto; aspect-ratio:1/1; border-radius:18px; z-index:5; animation:headbob 1.8s ease-in-out infinite; }
+  @keyframes headbob { 0%,100%{ translate:0 0; } 50%{ translate:0 -2%; } }
+  .sprite.e .stagebox .portrait { border-color:#fff; }
+  .torso { position:absolute; left:28%; top:38%; width:44%; height:27%; border-radius:12px 12px 8px 8px; background:var(--suit); border:3px solid #0b0816; z-index:2; }
+  .torso:after { content:""; position:absolute; left:-3px; right:-3px; bottom:10%; height:24%; background:var(--trim); border-top:2px solid #0006; border-bottom:2px solid #0006; }
+  .torso:before { content:""; position:absolute; left:34%; right:34%; top:14%; height:26%; border-radius:50%; background:var(--trim); opacity:.9; }
+  .arm { position:absolute; top:41%; width:15%; height:27%; transform-origin:50% 9%; border-radius:8px; background:var(--limb); border:3px solid #0b0816; }
+  .arm .glove { position:absolute; left:-18%; right:-18%; bottom:-12%; height:34%; border-radius:50%; background:var(--trim); border:3px solid #0b0816; }
+  .arm.front { left:66%; z-index:3; animation:sway 1.8s ease-in-out infinite; }
+  .arm.back { left:19%; z-index:4; rotate:20deg; animation:sway2 1.8s ease-in-out infinite; }
+  @keyframes sway { 0%,100%{ rotate:6deg; } 50%{ rotate:-6deg; } }
+  @keyframes sway2 { 0%,100%{ rotate:22deg; } 50%{ rotate:16deg; } }
+  .arm.back .sword { position:absolute; left:50%; bottom:-6%; height:100cqw; width:auto; aspect-ratio:60/200; margin:0; transform:translateX(-50%) rotate(-24deg); transform-origin:50% 94%; }
+  .leg { position:absolute; top:63%; width:18%; height:31%; transform-origin:50% 4%; border-radius:6px 6px 0 0; background:var(--limb); border:3px solid #0b0816; z-index:1; }
+  .leg .boot { position:absolute; left:-20%; right:-34%; bottom:-6%; height:30%; border-radius:8px 14px 4px 4px; background:var(--dark); border:3px solid #0b0816; }
+  .leg.front { left:51%; z-index:2; } .leg.back { left:31%; }
+  /* moves */
+  .punching .arm.front { animation:armPunch .36s ease-out; }
+  @keyframes armPunch { 0%{ rotate:10deg; scale:1; } 35%{ rotate:-92deg; scale:1 1.35; } 100%{ rotate:6deg; scale:1; } }
+  .punching.crit .arm.front .glove { background:#ffd166; box-shadow:0 0 14px #ffd166; }
+  .lunge-p .leg.front, .lunge-e .leg.front { rotate:-30deg; } .lunge-p .leg.back, .lunge-e .leg.back { rotate:28deg; }
+  .jumping .leg.front { animation:tuckF .7s; } .jumping .leg.back { animation:tuckB .7s; }
+  @keyframes tuckF { 0%,100%{ rotate:0deg; } 30%,80%{ rotate:-50deg; } } @keyframes tuckB { 0%,100%{ rotate:0deg; } 30%,80%{ rotate:35deg; } }
+  .casting .arm.front { animation:armCast .85s ease-out forwards; } .casting .arm.back { animation:armCast2 .85s ease-out forwards; }
+  @keyframes armCast { 0%{ rotate:6deg; } 25%,85%{ rotate:-90deg; } 100%{ rotate:6deg; } }
+  @keyframes armCast2 { 0%{ rotate:20deg; } 25%,85%{ rotate:-80deg; } 100%{ rotate:20deg; } }
+  .crouch .arm.front { animation:none; rotate:-150deg; } .crouch .arm.back { animation:none; rotate:-140deg; }
+  .crouch .leg { rotate:0deg; }
+  .dead .fig { rotate:6deg; } .dead .portrait.head { translate:0 6%; rotate:9deg; animation:none; }
+  .dead .arm { animation:none !important; rotate:4deg; } .dead .arm.back .sword { opacity:.35; }
+  .sprite.mood-win .arm.front { animation:cheer .5s ease-in-out infinite alternate; }
+  @keyframes cheer { 0%{ rotate:-150deg; } 100%{ rotate:-170deg; } }
   .banner { position:absolute; left:0; right:0; top:34%; text-align:center; font-weight:900; font-size:34px; letter-spacing:.1em; color:#fff; text-shadow:0 0 18px #e0457b, 0 3px 0 #000; animation:banner 1.6s ease-out forwards; pointer-events:none; z-index:6; }
   @keyframes banner { 0%{ transform:scale(2.2); opacity:0; } 20%{ transform:scale(1); opacity:1; } 80%{ opacity:1; } 100%{ opacity:0; } }
   .moves { display:grid; grid-template-columns:1fr 1.3fr 1fr; gap:8px; margin:12px 0 8px; }
@@ -142,7 +200,7 @@
   .result h2 { margin:4px 0; font-size:26px; } .result .big { font-size:34px; font-weight:900; color:var(--gold); }
   .result .row { justify-content:center; margin-top:10px; }
   .kv { display:flex; justify-content:center; gap:18px; flex-wrap:wrap; color:var(--mute); font-size:14px; margin-top:6px; } .kv b { color:var(--ink); }
-  @media (prefers-reduced-motion: reduce) { .stagebox .portrait, .scene .cloud, .tear, .mood-cry .portrait .art, .mood-win .portrait .art, .float, .banner { animation:none; } .tear { opacity:.9; } }
+  @media (prefers-reduced-motion: reduce) { .jumping .stagebox, .dodge .stagebox, .knock .stagebox, .sprite.mood-win .stagebox, .fist, .charge, .stagebox .portrait, .scene .cloud, .tear, .mood-cry .portrait .art, .mood-win .portrait .art, .float, .banner { animation:none; } .tear { opacity:.9; } }
 </style>
 </head>
 <body>
@@ -192,8 +250,8 @@
     </div>
     <div class="scene" id="arena"></div>
     <div class="moves">
-      <button id="mAtk">Attack<small>reliable hit</small></button>
-      <button id="mSp">Special<small id="spName"></small></button>
+      <button id="mAtk">Punch<small>reliable hit</small></button>
+      <button id="mSp">Jump + Beam<small id="spName"></small></button>
       <button id="mGd">Guard<small>block + heal</small></button>
     </div>
     <div class="log" id="log"></div>
@@ -325,12 +383,22 @@ const hudHTML = (side, f, isBoss) => `<div class="hudbar ${side}">
     <div class="face">${faceHTML(f)}</div>
     <div class="meta"><div class="hname">Chog #${esc(f.id)}${f.level ? ' · Lv ' + f.level : ''}${isBoss && side === 'e' ? ' · BOSS' : ''}</div>
     <div class="hp"><i id="hp-${side}"></i><span id="hpt-${side}"></span></div></div></div>`;
-const spriteHTML = (side, f) => `<div class="sprite ${side}" id="f-${side}">
-    <div class="stagebox" id="sb-${side}">
-      <div class="portrait"><div class="art" style="position:absolute;inset:0"><div class="ph" id="ph-${side}">${f.art.placeholder}</div>${f.nft.image ? `<img src="${esc(f.nft.image)}" alt="Chog #${esc(f.id)}" decoding="async" onload="this.style.opacity=1" onerror="this.remove()">` : ''}</div><div class="tears"><i class="tear"></i><i class="tear"></i><i class="tear"></i><i class="tear"></i></div></div>
-      <div class="sword ${f.art.sword.glow ? 'glow' : ''}">${f.art.sword.svg}</div>
-      <div class="fx" id="fx-${side}"></div>
-    </div></div>`;
+const hashStr = (str) => { let h = 2166136261; for (const c of String(str)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
+// Body colours come from the token's own traits, so every Chog gets its own outfit.
+function outfit(f) {
+  const h = hashStr(Object.entries(f.brain.traits).map(([k, v]) => k + v).join('|') || f.id);
+  const hue = h % 360, hue2 = (hue + 140 + (h >> 9) % 80) % 360;
+  return `--suit:hsl(${hue} 62% 46%);--trim:hsl(${hue2} 80% 62%);--limb:hsl(${hue} 28% 74%);--dark:hsl(${hue} 45% 22%)`;
+}
+const spriteHTML = (side, f) => `<div class="sprite ${side} ${f.art.sword.glow ? 'glowy' : ''}" id="f-${side}" style="${outfit(f)}">
+    <div class="stagebox" id="sb-${side}"><div class="fig">
+      <div class="leg back"><i class="boot"></i></div><div class="leg front"><i class="boot"></i></div>
+      <div class="arm back"><div class="sword ${f.art.sword.glow ? 'glow' : ''}">${f.art.sword.svg}</div><i class="glove"></i></div>
+      <div class="torso"></div>
+      <div class="arm front"><i class="glove"></i></div>
+      <div class="portrait head"><div class="art" style="position:absolute;inset:0"><div class="ph" id="ph-${side}">${f.art.placeholder}</div>${f.nft.image ? `<img src="${esc(f.nft.image)}" alt="Chog #${esc(f.id)}" decoding="async" onload="this.style.opacity=1" onerror="this.remove()">` : ''}</div><div class="tears"><i class="tear"></i><i class="tear"></i><i class="tear"></i><i class="tear"></i></div></div>
+    </div>
+    <div class="fx" id="fx-${side}"></div></div></div>`;
 const SCENERY = `<div class="cloud c1"></div><div class="cloud c2"></div>
   <svg class="mtn" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
     <polygon fill="var(--m1)" points="0,120 0,64 36,38 70,70 118,16 172,78 226,30 290,82 342,42 400,68 400,120"/>
@@ -354,7 +422,10 @@ function logLine(t) { const l = $('log'); const d = document.createElement('div'
 function floatText(side, text, cls) {
   const d = document.createElement('div'); d.className = 'float ' + cls; d.textContent = text; $('fx-' + side).appendChild(d); setTimeout(() => d.remove(), 1000);
 }
-function pulse(el, cls, ms) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); setTimeout(() => el.classList.remove(cls), ms); }
+function pulse(el, cls, ms) { if (!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); setTimeout(() => el.classList.remove(cls), ms); }
+function fist(side, crit) { const d = document.createElement('div'); d.className = 'fist ' + side + (crit ? ' crit' : ''); $('fx-' + side).appendChild(d); setTimeout(() => d.remove(), 400); }
+function charge(side) { const d = document.createElement('div'); d.className = 'charge ' + side; $('fx-' + side).appendChild(d); setTimeout(() => d.remove(), 550); }
+function punch(side, crit) { const el = $('f-' + side); el.classList.toggle('crit', !!crit); pulse(el, 'lunge-' + side, 260); pulse(el, 'punching', 380); }
 function burst(side, big) { const d = document.createElement('div'); d.className = 'burst' + (big ? ' big' : ''); $('fx-' + side).appendChild(d); setTimeout(() => d.remove(), 450); }
 function slash(side) { const d = document.createElement('div'); d.className = 'slash'; $('fx-' + side).appendChild(d); setTimeout(() => d.remove(), 350); }
 function beam(from) { const d = document.createElement('div'); d.className = 'beam b' + from; $('arena').appendChild(d); setTimeout(() => d.remove(), 650); }
@@ -402,25 +473,32 @@ async function play(events) {
     const w = sideKey[ev.who], o = w === 'p' ? 'e' : 'p';
     const nameOf = (side) => 'Chog #' + battle[side === 'p' ? 'player' : 'enemy'].id;
     if (ev.type === 'guard') {
-      pulse($('f-' + w), 'shield', 900); sfx.guard();
+      pulse($('f-' + w), 'shield', 900); pulse($('f-' + w), 'crouch', 900); sfx.guard();
       if (ev.heal) floatText(w, '+' + ev.heal, 'heal');
       logLine(`${nameOf(w)} guards.`);
     } else if (ev.type === 'miss') {
-      pulse($('f-' + w), 'lunge-' + w, 240); sfx.dodge(); floatText(o, 'MISS', 'miss');
-      logLine(`${nameOf(w)} used ${ev.move === 'special' ? (battle[w === 'p' ? 'player' : 'enemy'].brain.signatureMove) : 'attack'}... and missed!`);
+      const sig = battle[w === 'p' ? 'player' : 'enemy'].brain.signatureMove;
+      if (ev.move === 'special') { sfx.special(); pulse($('f-' + w), 'jumping', 700); await wait(280); pulse($('f-' + w), 'casting', 900); charge(w); await wait(260); beam(w); await wait(150); }
+      else { punch(w, false); await wait(150); }
+      pulse($('f-' + o), 'dodge', 480); sfx.dodge(); floatText(o, 'MISS', 'miss');
+      logLine(`${nameOf(w)} used ${ev.move === 'special' ? sig : 'a punch'}... and missed!`);
     } else if (ev.type === 'hit') {
-      pulse($('f-' + w), 'lunge-' + w, 260); await wait(190);
-      ev.move === 'special' ? sfx.special() : ev.crit ? sfx.crit() : sfx.hit();
-      if (ev.move === 'special') { beam(w); await wait(260); pulse($('arena'), 'shake', 320); }
-      burst(o, ev.move === 'special' || ev.crit); slash(o);
-      pulse($('f-' + o), 'hurt', 360);
+      const sp = ev.move === 'special';
+      if (sp) {
+        sfx.special(); pulse($('f-' + w), 'jumping', 700); await wait(280); pulse($('f-' + w), 'casting', 900); charge(w); await wait(260); beam(w); await wait(220);
+        pulse($('arena'), 'shake', 320);
+      } else {
+        punch(w, ev.crit); await wait(170); ev.crit ? sfx.crit() : sfx.hit();
+      }
+      burst(o, sp || ev.crit);
+      pulse($('f-' + o), 'hurt', 360); pulse($('f-' + o), 'knock', 400);
       floatText(o, '-' + ev.dmg, ev.crit ? 'crit' : '');
       if (ev.blocked) floatText(o, 'BLOCK', 'block');
       if (ev.crit) pulse($('f-' + o), 'flash', 400);
-      const nm = ev.move === 'special' ? battle[w === 'p' ? 'player' : 'enemy'].brain.signatureMove : 'a strike';
+      const nm = sp ? battle[w === 'p' ? 'player' : 'enemy'].brain.signatureMove : 'a punch';
       logLine(`${nameOf(w)} lands ${nm} for ${ev.dmg}${ev.crit ? ' (CRIT!)' : ''}${ev.blocked ? ', mostly blocked' : ''}.`);
     } else if (ev.type === 'counter') {
-      sfx.clash(); pulse($('f-' + w), 'lunge-' + w, 240); floatText(o, '-' + ev.dmg, ''); logLine(`${nameOf(w)} counters for ${ev.dmg}!`);
+      sfx.clash(); punch(w, false); floatText(o, '-' + ev.dmg, ''); logLine(`${nameOf(w)} counters for ${ev.dmg}!`);
     }
     setHp('p', ev.hp.p, battle.state.p.max); setHp('e', ev.hp.e, battle.state.e.max);
     await wait(650);
