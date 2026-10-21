@@ -98,8 +98,35 @@
     x.imageSmoothingEnabled = true; x.drawImage(im, 1, 1, 24, 24);
     x.fillStyle = INK;
     x.fillRect(0, 0, 26, 1); x.fillRect(0, 25, 26, 1); x.fillRect(0, 0, 1, 26); x.fillRect(25, 0, 1, 26);
-    for (const [px, py] of [[1, 1], [24, 1], [1, 24], [24, 24]]) x.fillRect(px, py, 1, 1);
     for (const [px, py] of [[0, 0], [25, 0], [0, 25], [25, 25]]) x.clearRect(px, py, 1, 1);
+    return c;
+  }
+  // Cut the Chog out of its flat background so the head has its own shape, then add a pixel outline.
+  function cutoutHead(im) {
+    const N = 30, c = document.createElement('canvas'); c.width = c.height = N; const x = c.getContext('2d', { willReadFrequently: true });
+    x.imageSmoothingEnabled = true; x.drawImage(im, 1, 1, N - 2, N - 2);
+    try {
+      const d = x.getImageData(0, 0, N, N), p = d.data, ref = [p[(1 * N + 1) * 4], p[(1 * N + 1) * 4 + 1], p[(1 * N + 1) * 4 + 2]];
+      const near = (i) => Math.abs(p[i] - ref[0]) + Math.abs(p[i + 1] - ref[1]) + Math.abs(p[i + 2] - ref[2]) < 60;
+      const seen = new Uint8Array(N * N), q = [];
+      for (let i = 1; i < N - 1; i++) q.push(1 * N + i, (N - 2) * N + i, i * N + 1, i * N + N - 2);
+      while (q.length) {
+        const k = q.pop(); if (seen[k]) continue; const px = k % N, py = (k / N) | 0;
+        if (px < 1 || py < 1 || px > N - 2 || py > N - 2 || !near(k * 4)) continue;
+        seen[k] = 1; q.push(k + 1, k - 1, k + N, k - N);
+      }
+      for (let i = 0; i < N; i++) for (const k of [i, (N - 1) * N + i, i * N, i * N + N - 1]) seen[k] = 1;
+      let cleared = 0; for (let k = 0; k < N * N; k++) if (seen[k]) cleared++;
+      if (cleared < N * N * 0.08 || cleared > N * N * 0.7) return null; // background not flat: keep the square
+      for (let k = 0; k < N * N; k++) { if (seen[k]) p[k * 4 + 3] = 0; else p[k * 4 + 3] = 255; }
+      const out = new Uint8ClampedArray(p);
+      for (let py = 0; py < N; py++) for (let px = 0; px < N; px++) {
+        const k = py * N + px; if (!seen[k]) continue;
+        const nb = (px > 0 && !seen[k - 1]) || (px < N - 1 && !seen[k + 1]) || (py > 0 && !seen[k - N]) || (py < N - 1 && !seen[k + N]);
+        if (nb) { out[k * 4] = 26; out[k * 4 + 1] = 16; out[k * 4 + 2] = 32; out[k * 4 + 3] = 255; }
+      }
+      d.data.set(out); x.putImageData(d, 0, 0);
+    } catch (e) { return null; }
     return c;
   }
   function fallbackHead(col) {
@@ -118,7 +145,7 @@
       const f = { side, id: d.id, x: side === 'p' ? 64 : 176, dir: side === 'p' ? 1 : -1, anim: null, hp: 1, max: 1, shown: 1, chip: 1, cd: 0, ko: false, win: false, winT: 0,
         col, phase: side === 'p' ? 0 : 1.7, head: fallbackHead(col.faceBg), glow: !!(d.art && d.art.sword && d.art.sword.glow), buf: document.createElement('canvas'), hand: { x: 0, y: 0 }, level: d.level || 0 };
       f.buf.width = f.buf.height = 96; f.bctx = f.buf.getContext('2d');
-      if (d.nft && d.nft.image) { const im = new Image(); im.onload = () => { f.head = makeHead(im); }; im.src = d.nft.image; }
+      if (d.nft && d.nft.image) { const im = new Image(); im.onload = () => { f.face = makeHead(im); f.head = cutoutHead(im) || f.face; f.cut = f.head !== f.face; }; im.src = d.nft.image; }
       return f;
     }
 
@@ -185,7 +212,7 @@
       rect(c, lean - 6, hipY - 4, 12, 3, K.trim); rect(c, lean - 2, shY + 3, 4, 4, K.trim);
       leg(3, aF, true);
       // head
-      c.drawImage(f.head, Math.round(hx - 11), Math.round(hy - 10), 22, 22);
+      c.drawImage(f.head, Math.round(hx - 14), Math.round(hy - 13), f.cut ? 28 : 22, f.cut ? 28 : 22);
       // front arm
       f.hand = arm(lean + 5, shY + 3, P.armF, P.lenF, P.fist ? '#ffd166' : K.trim);
       if (P.armB === P.armF) {/* both arms forward during the special */}
@@ -221,7 +248,7 @@
         const ratio = Math.max(0, f.shown / f.max), chip = Math.max(0, f.chip / f.max);
         const bx = left ? 32 : 130, bw = 78;
         // portrait
-        const fx = left ? 2 : 212; ctx.drawImage(f.head, fx, 1); rect(ctx, fx - 1, 0, 28, 1, '#fff'); rect(ctx, fx - 1, 28, 28, 1, '#fff'); rect(ctx, fx - 1, 0, 1, 29, '#fff'); rect(ctx, fx + 26, 0, 1, 29, '#fff');
+        const fx = left ? 2 : 212; ctx.drawImage(f.face || f.head, fx, 1); rect(ctx, fx - 1, 0, 28, 1, '#fff'); rect(ctx, fx - 1, 28, 28, 1, '#fff'); rect(ctx, fx - 1, 0, 1, 29, '#fff'); rect(ctx, fx + 26, 0, 1, 29, '#fff');
         // name
         const name = 'CHOG ' + f.id; text(ctx, name, left ? bx : bx + bw - tw(name, 2), 2, 2, '#fff', INK);
         if (!left && S.boss) text(ctx, 'BOSS', bx, 4, 1, '#ff6b8a', INK);
