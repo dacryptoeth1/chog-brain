@@ -66,7 +66,8 @@
   .hud { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
   .hud b { font-size:18px; } .pill { font-size:12px; background:#120e24; border:1px solid var(--line); border-radius:99px; padding:3px 10px; color:var(--mute); }
   .bossb { font-size:11px; font-weight:700; background:#e0457b; color:#fff; border-radius:6px; padding:1px 6px; vertical-align:middle; }
-  /* side-view arena scene */
+  .arenacv { display:block; width:100%; aspect-ratio:3/2; image-rendering:pixelated; border:3px solid #0b0816; border-radius:10px; background:#000; box-shadow:0 0 0 2px var(--line); }
+  /* old scene (unused) */
   .scene { position:relative; width:100%; aspect-ratio:16/10; overflow:hidden; border-radius:14px; border:3px solid #0b0816; box-shadow:0 0 0 2px var(--line);
     --s1:#5db8f5; --s2:#d9f2ff; --m1:#86b97a; --m2:#5f9a58; --g1:#63c24f; --g2:#8c6a3c; background:linear-gradient(var(--s1), var(--s2) 70%); image-rendering:pixelated; }
   @media (max-width:560px) { .scene { aspect-ratio:10/8.4; } .sprite { width:clamp(84px,27%,140px); } }
@@ -250,7 +251,7 @@
       <div><b id="hudTitle">Stage 1</b> <span id="hudBoss" class="bossb hidden">BOSS</span></div>
       <div class="row"><span class="pill" id="hudScore">Score 0</span><span class="pill" id="hudBest"></span><button class="ghost" id="quit" style="min-height:34px;padding:4px 10px;font-size:13px">Quit</button></div>
     </div>
-    <div class="scene" id="arena"></div>
+    <canvas id="arena" class="arenacv" width="240" height="160"></canvas>
     <div class="moves">
       <button id="mAtk">Punch<small>reliable hit</small></button>
       <button id="mSp">Jump + Beam<small id="spName"></small></button>
@@ -261,12 +262,14 @@
   </div>
 </main>
 
+<script src="arena.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 let account = null, me = null, run = null, battle = null;
 
+const A = Arena.create($('arena'));
 async function api(path, body) {
   const r = await fetch(path, body !== undefined ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : undefined);
   let j; try { j = await r.json(); } catch { throw new Error('Server error, please try again.'); }
@@ -418,13 +421,7 @@ function sceneHTML(d) {
   return SCENERY + `<div class="bigscore" id="bigScore">${battle && battle.mode === 'daily' ? '' : String(run.score).padStart(4, '0')}</div><div class="stagetag ${d.boss ? 'bossed' : ''}">${tag}</div>` + hudHTML('p', d.player, false) + hudHTML('e', d.enemy, d.boss) + spriteHTML('p', d.player) + spriteHTML('e', d.enemy);
 }
 
-function setHp(side, hp, max) {
-  const pct = Math.max(0, Math.min(100, (hp / max) * 100));
-  const bar = $('hp-' + side);
-  bar.style.width = pct + '%';
-  bar.style.background = pct > 50 ? 'var(--ok)' : pct > 25 ? 'var(--warn)' : 'var(--bad)';
-  $('hpt-' + side).textContent = Math.max(0, hp) + ' / ' + max;
-}
+function setHp(side, hp, max) { A.setHp(side, Math.max(0, hp), max); if (battle) A.setCd(side, battle.state[side].cd); }
 function logLine(t) { const l = $('log'); const d = document.createElement('div'); d.textContent = t; l.appendChild(d); while (l.children.length > 4) l.removeChild(l.firstChild); }
 function floatText(side, text, cls) {
   const d = document.createElement('div'); d.className = 'float ' + cls; d.textContent = text; $('fx-' + side).appendChild(d); setTimeout(() => d.remove(), 1000);
@@ -436,12 +433,8 @@ function punch(side, crit) { const el = $('f-' + side); el.classList.toggle('cri
 function burst(side, big) { const d = document.createElement('div'); d.className = 'burst' + (big ? ' big' : ''); $('fx-' + side).appendChild(d); setTimeout(() => d.remove(), 450); }
 function slash(side) { const d = document.createElement('div'); d.className = 'slash'; $('fx-' + side).appendChild(d); setTimeout(() => d.remove(), 350); }
 function beam(from) { const d = document.createElement('div'); d.className = 'beam b' + from; $('arena').appendChild(d); setTimeout(() => d.remove(), 650); }
-function cryOn(side) {
-  const f = $('f-' + side); f.classList.add('mood-cry', 'dead');
-  const d = battle[side === 'p' ? 'player' : 'enemy'];
-  $('ph-' + side).innerHTML = d.art.placeholderCry;
-}
-function celebrate(side) { $('f-' + side).classList.add('mood-win'); }
+function cryOn(side) { A.ko(side); }
+function celebrate(side) { A.win(side); }
 
 function updateMoves(enabled) {
   const cd = battle ? battle.state.p.cd : 0;
@@ -464,51 +457,42 @@ async function startStage(mode, stage, hp) {
   const d = await api('/api/stage?' + q);
   battle = { ...d, busy: false, over: false };
   $('lobby').classList.add('hidden'); $('battle').classList.remove('hidden'); $('result').classList.add('hidden'); $('result').innerHTML = '';
-  $('arena').innerHTML = sceneHTML(d);
+  A.setup({ player: d.player, enemy: d.enemy, boss: d.boss, mode: d.mode, stage: d.stage, score: run.score, best: d.best && d.best.stage, theme: d.boss ? 4 : (d.stage - 1) % 4, state: d.state });
+  A.banner(d.mode === 'daily' ? 'DAILY BOSS' : d.boss ? 'BOSS!' : 'STAGE ' + d.stage, d.boss ? '#ff6b8a' : '#ffd166', 4, 1300);
   $('log').innerHTML = '';
   setHp('p', d.state.p.hp, d.state.p.max); setHp('e', d.state.e.hp, d.state.e.max);
   drawHud(); updateMoves(true);
   logLine(d.boss ? `BOSS FIGHT! Chog #${d.enemy.id} blocks the way.` : `Stage ${d.stage}: Chog #${d.enemy.id} wants a fight.`);
   if (d.boss) {
-    const b = document.createElement('div'); b.className = 'banner'; b.textContent = 'BOSS'; $('arena').appendChild(b); setTimeout(() => b.remove(), 1700); sfx.boss();
+    sfx.boss();
   } else sfx.clash();
 }
 
 async function play(events) {
-  const mv = (n) => n === 'special' ? battle[ 'player' ].brain.signatureMove : n;
   for (const ev of events) {
     const w = sideKey[ev.who], o = w === 'p' ? 'e' : 'p';
     const nameOf = (side) => 'Chog #' + battle[side === 'p' ? 'player' : 'enemy'].id;
+    const sig = battle[w === 'p' ? 'player' : 'enemy'].brain.signatureMove;
     if (ev.type === 'guard') {
-      pulse($('f-' + w), 'shield', 900); pulse($('f-' + w), 'crouch', 900); sfx.guard();
-      if (ev.heal) floatText(w, '+' + ev.heal, 'heal');
+      A.act(w, 'guard'); sfx.guard();
+      if (ev.heal) A.float(w, '+' + ev.heal, '#7dffa0', 2);
       logLine(`${nameOf(w)} guards.`);
     } else if (ev.type === 'miss') {
-      const sig = battle[w === 'p' ? 'player' : 'enemy'].brain.signatureMove;
-      if (ev.move === 'special') { sfx.special(); pulse($('f-' + w), 'jumping', 700); await wait(280); pulse($('f-' + w), 'casting', 900); charge(w); await wait(260); beam(w); await wait(150); }
-      else { punch(w, false); await wait(150); }
-      pulse($('f-' + o), 'dodge', 480); sfx.dodge(); floatText(o, 'MISS', 'miss');
+      if (ev.move === 'special') { sfx.special(); A.act(w, 'special'); await wait(620); }
+      else { sfx.clash(); A.act(w, 'punch'); await wait(200); }
+      A.miss(o); sfx.dodge();
       logLine(`${nameOf(w)} used ${ev.move === 'special' ? sig : 'a punch'}... and missed!`);
     } else if (ev.type === 'hit') {
       const sp = ev.move === 'special';
-      if (sp) {
-        sfx.special(); pulse($('f-' + w), 'jumping', 700); await wait(280); pulse($('f-' + w), 'casting', 900); charge(w); await wait(260); beam(w); await wait(220);
-        pulse($('arena'), 'shake', 320);
-      } else {
-        punch(w, ev.crit); await wait(170); ev.crit ? sfx.crit() : sfx.hit();
-      }
-      burst(o, sp || ev.crit);
-      pulse($('f-' + o), 'hurt', 360); pulse($('f-' + o), 'knock', 400);
-      floatText(o, '-' + ev.dmg, ev.crit ? 'crit' : '');
-      if (ev.blocked) floatText(o, 'BLOCK', 'block');
-      if (ev.crit) pulse($('f-' + o), 'flash', 400);
-      const nm = sp ? battle[w === 'p' ? 'player' : 'enemy'].brain.signatureMove : 'a punch';
-      logLine(`${nameOf(w)} lands ${nm} for ${ev.dmg}${ev.crit ? ' (CRIT!)' : ''}${ev.blocked ? ', mostly blocked' : ''}.`);
+      if (sp) { sfx.special(); A.act(w, 'special'); await wait(700); }
+      else { A.act(w, Math.random() < 0.3 ? 'kick' : 'punch'); await wait(190); ev.crit ? sfx.crit() : sfx.hit(); }
+      A.impact(o, { dmg: ev.dmg, crit: ev.crit, big: sp, blocked: ev.blocked });
+      logLine(`${nameOf(w)} lands ${sp ? sig : 'a punch'} for ${ev.dmg}${ev.crit ? ' (CRIT!)' : ''}${ev.blocked ? ', mostly blocked' : ''}.`);
     } else if (ev.type === 'counter') {
-      sfx.clash(); punch(w, false); floatText(o, '-' + ev.dmg, ''); logLine(`${nameOf(w)} counters for ${ev.dmg}!`);
+      sfx.clash(); A.act(w, 'kick'); A.impact(o, { dmg: ev.dmg }); logLine(`${nameOf(w)} counters for ${ev.dmg}!`);
     }
     setHp('p', ev.hp.p, battle.state.p.max); setHp('e', ev.hp.e, battle.state.e.max);
-    await wait(650);
+    await wait(750);
   }
 }
 
@@ -540,7 +524,7 @@ async function endBattle(out) {
 
   if (battle.mode === 'arena' && won) {
     run.cleared = battle.stage; run.score += out.score;
-    $('hudScore').textContent = 'Score ' + run.score; if ($('bigScore')) $('bigScore').textContent = String(run.score).padStart(4, '0');
+    $('hudScore').textContent = 'Score ' + run.score; A.setScore(run.score);
     const nextIsBoss = (battle.stage + 1) % 5 === 0;
     R.innerHTML = `<div class="big">Stage ${battle.stage} cleared!</div><div class="kv"><span>+<b>${out.score}</b> pts</span><span>HP restored to <b>${out.nextHp}</b>/${out.state.p.max}</span></div>
       <p class="sub" style="margin:8px 0 0">${nextIsBoss ? 'Next up: a BOSS.' : 'Chog #' + battle.enemy.id + ' is crying. Next opponent incoming.'}</p>
