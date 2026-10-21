@@ -66,29 +66,71 @@
   .hud { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
   .hud b { font-size:18px; } .pill { font-size:12px; background:#120e24; border:1px solid var(--line); border-radius:99px; padding:3px 10px; color:var(--mute); }
   .bossb { font-size:11px; font-weight:700; background:#e0457b; color:#fff; border-radius:6px; padding:1px 6px; vertical-align:middle; }
-  .arena { display:grid; grid-template-columns:1fr 1fr; gap:10px; position:relative; }
-  .fighter { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:10px; min-width:0; }
-  .fighter.e { border-color:#5b2b49; }
-  .fname { font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .lv { font-size:12px; color:var(--mute); }
-  .hp { position:relative; height:18px; background:#120e24; border-radius:9px; overflow:hidden; margin:6px 0 8px; border:1px solid var(--line); }
+  /* side-view arena scene */
+  .scene { position:relative; width:100%; aspect-ratio:16/11; overflow:hidden; border-radius:14px; border:3px solid #0b0816; box-shadow:0 0 0 2px var(--line);
+    --s1:#5db8f5; --s2:#d9f2ff; --m1:#86b97a; --m2:#5f9a58; --g1:#63c24f; --g2:#8c6a3c; background:linear-gradient(var(--s1), var(--s2) 70%); image-rendering:pixelated; }
+  @media (max-width:560px) { .scene { aspect-ratio:10/9; } }
+  .scene.theme-1 { --s1:#ff8a4c; --s2:#ffe0a3; --m1:#b5607a; --m2:#8a4565; --g1:#9bb544; --g2:#7a4a35; }
+  .scene.theme-2 { --s1:#14123f; --s2:#4a3a9a; --m1:#2d2c72; --m2:#221f5c; --g1:#4f9a74; --g2:#3b2c52; }
+  .scene.theme-3 { --s1:#ff7fcf; --s2:#ffe6f4; --m1:#c58ad8; --m2:#9a63b8; --g1:#6bd0a8; --g2:#7a5a7a; }
+  .scene.theme-boss { --s1:#4a0b25; --s2:#d4541c; --m1:#5b1f2c; --m2:#3b1220; --g1:#a8452e; --g2:#3a1a18; }
+  .scene.theme-2:before { content:""; position:absolute; inset:0 0 40% 0; background:radial-gradient(2px 2px at 12% 20%,#fff,transparent),radial-gradient(2px 2px at 40% 12%,#fff,transparent),radial-gradient(2px 2px at 70% 26%,#fff,transparent),radial-gradient(1.5px 1.5px at 88% 10%,#fff,transparent),radial-gradient(1.5px 1.5px at 25% 34%,#fff,transparent); }
+  .scene svg.mtn { position:absolute; left:0; bottom:24%; width:100%; height:46%; }
+  .scene .cloud { position:absolute; height:16px; width:70px; border-radius:99px; background:#fffc; box-shadow:22px -8px 0 4px #fffc, 44px 0 0 0 #fffc; animation:drift 40s linear infinite; }
+  .scene .cloud.c1 { top:16%; left:-20%; } .scene .cloud.c2 { top:30%; left:-60%; animation-duration:60s; transform:scale(.7); }
+  .scene.theme-2 .cloud, .scene.theme-boss .cloud { opacity:.25; }
+  @keyframes drift { to { transform:translateX(160vw); } }
+  .scene .ground { position:absolute; left:0; right:0; bottom:0; height:26%; background:linear-gradient(var(--g1) 0 16%, var(--g2) 16%); border-top:3px solid #0004; }
+  .scene .ground:before { content:""; position:absolute; left:0; right:0; top:-11px; height:12px; background:radial-gradient(circle at 9px 12px, var(--g1) 7px, transparent 8px) 0 0/18px 12px repeat-x; }
+  .scene .ground:after { content:""; position:absolute; inset:16% 0 0 0; background:repeating-linear-gradient(90deg,#0003 0 2px,transparent 2px 26px),repeating-linear-gradient(0deg,#0002 0 2px,transparent 2px 22px); }
+  .stagetag { position:absolute; top:62px; left:0; right:0; text-align:center; font:800 12px ui-monospace,Menlo,monospace; letter-spacing:.25em; color:#fff; text-shadow:0 2px 0 #000a; z-index:4; }
+  .stagetag.bossed { color:#ffb3c9; }
+  .hudbar { position:absolute; top:8px; width:46%; display:flex; align-items:center; gap:6px; z-index:5; }
+  .hudbar.p { left:8px; } .hudbar.e { right:8px; flex-direction:row-reverse; }
+  .hudbar .face { position:relative; width:46px; height:46px; border-radius:50%; border:3px solid #fff; background:#120e24; overflow:hidden; flex:none; box-shadow:0 2px 0 #0008; }
+  .hudbar .face .ph { position:absolute; inset:0; padding:4px; } .hudbar .face .ph svg { width:100%; height:100%; }
+  .hudbar .face img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity .3s; }
+  .hudbar .meta { flex:1; min-width:0; }
+  .hname { font:800 11px ui-monospace,Menlo,monospace; letter-spacing:.08em; color:#fff; text-shadow:-1px 0 #000,1px 0 #000,0 -1px #000,0 1px #000; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .hudbar.e .hname { text-align:right; }
+  .hp { position:relative; height:16px; background:#2b1b12; border-radius:9px; overflow:hidden; margin:3px 0 0; border:2px solid #fff; box-shadow:0 2px 0 #0008; }
   .hp i { position:absolute; inset:0 auto 0 0; width:100%; background:var(--ok); transition:width .5s ease, background .3s; }
-  .hp span { position:absolute; inset:0; text-align:center; font-size:12px; line-height:16px; font-weight:700; text-shadow:0 1px 2px #000; }
-  .stagebox { position:relative; transition:transform .18s; }
-  .stagebox .portrait { width:100%; height:auto; aspect-ratio:1/1; }
-  .stagebox .sword { position:absolute; bottom:-6px; right:-6px; height:62%; width:auto; aspect-ratio:60/200; margin:0; transform:rotate(16deg); }
-  .fighter.e .stagebox .sword { right:auto; left:-6px; transform:scaleX(-1) rotate(16deg); }
-  .mini { font-size:12px; color:var(--mute); margin-top:8px; display:flex; justify-content:space-between; gap:4px; flex-wrap:wrap; }
+  .hudbar.e .hp i { inset:0 0 0 auto; }
+  .hp span { position:absolute; inset:0; text-align:center; font-size:11px; line-height:12px; font-weight:800; color:#fff; text-shadow:0 1px 2px #000; }
+  .sprite { position:absolute; bottom:20%; width:30%; z-index:3; }
+  .sprite.p { left:9%; } .sprite.e { right:9%; }
+  .sprite:after { content:""; position:absolute; left:6%; right:6%; bottom:-9px; height:11px; background:#0007; border-radius:50%; filter:blur(2px); z-index:-1; }
+  .stagebox { position:relative; transition:transform .2s ease-out; }
+  .stagebox .portrait { width:100%; height:auto; aspect-ratio:1/1; border-radius:14px; border:3px solid #fff; box-shadow:0 5px 0 #0006; animation:bob 1.8s ease-in-out infinite; }
+  .sprite.e .stagebox .portrait { animation-delay:.9s; border-color:#ffd1e3; }
+  .sprite.e .portrait img { transform:scaleX(-1); }
+  @keyframes bob { 0%,100%{ translate:0 0; } 50%{ translate:0 -3px; } }
+  .stagebox .sword { position:absolute; bottom:4%; height:84%; width:auto; aspect-ratio:60/200; margin:0; }
+  .sprite.p .stagebox .sword { right:-17%; transform:rotate(20deg); transform-origin:50% 90%; }
+  .sprite.e .stagebox .sword { left:-17%; transform:scaleX(-1) rotate(20deg); transform-origin:50% 90%; }
   .fx { position:absolute; inset:0; pointer-events:none; overflow:visible; }
-  .float { position:absolute; left:50%; top:30%; transform:translateX(-50%); font-weight:900; font-size:30px; color:#fff; text-shadow:0 2px 0 #000,0 0 10px #000; animation:floatup 1s ease-out forwards; white-space:nowrap; z-index:5; }
-  .float.crit { color:var(--gold); font-size:40px; } .float.heal { color:var(--ok); } .float.miss, .float.block { color:#cbd5e1; font-size:22px; }
-  @keyframes floatup { 0%{ transform:translate(-50%,10px) scale(.6); opacity:0; } 15%{ opacity:1; transform:translate(-50%,0) scale(1.15); } 100%{ transform:translate(-50%,-70px) scale(1); opacity:0; } }
-  .lunge-p { transform:translateX(26px) scale(1.06); } .lunge-e { transform:translateX(-26px) scale(1.06); }
+  .float { position:absolute; left:50%; top:20%; transform:translateX(-50%); font-weight:900; font-size:26px; color:#fff; text-shadow:0 2px 0 #000,0 0 8px #000; animation:floatup 1s ease-out forwards; white-space:nowrap; z-index:8; }
+  .float.crit { color:var(--gold); font-size:34px; } .float.heal { color:var(--ok); } .float.miss, .float.block { color:#cbd5e1; font-size:18px; }
+  @keyframes floatup { 0%{ transform:translate(-50%,10px) scale(.6); opacity:0; } 15%{ opacity:1; transform:translate(-50%,0) scale(1.15); } 100%{ transform:translate(-50%,-64px) scale(1); opacity:0; } }
+  .lunge-p .stagebox, .sprite.p.lunge-p .stagebox { transform:translateX(70%) scale(1.06); }
+  .sprite.e.lunge-e .stagebox { transform:translateX(-70%) scale(1.06); }
   @keyframes hurt { 0%,100%{ transform:translateX(0); } 20%{ transform:translateX(-7px); } 40%{ transform:translateX(7px); } 60%{ transform:translateX(-5px); } 80%{ transform:translateX(5px); } }
-  .hurt { animation:hurt .35s; } .hurt .portrait { filter:brightness(1.8) saturate(1.4); }
-  .shield .portrait { box-shadow:0 0 0 3px #7dd3fc, 0 0 24px #7dd3fcaa; }
-  .fighter.dead .stagebox .sword { opacity:.35; }
+  .hurt { animation:hurt .35s; } .hurt .portrait { filter:brightness(1.9) saturate(1.4); }
+  .shield .portrait { box-shadow:0 0 0 3px #7dd3fc, 0 0 22px #7dd3fcaa; }
+  .dead .stagebox .sword { opacity:.35; }
   .flash { animation:flash .4s; } @keyframes flash { 0%{ box-shadow:0 0 0 0 #ffd166; } 100%{ box-shadow:0 0 0 0 transparent; } }
-  .banner { position:absolute; left:0; right:0; top:42%; text-align:center; font-weight:900; font-size:34px; letter-spacing:.1em; color:#fff; text-shadow:0 0 18px #e0457b, 0 3px 0 #000; animation:banner 1.6s ease-out forwards; pointer-events:none; z-index:6; }
+  .burst { position:absolute; left:50%; top:40%; width:70px; height:70px; margin:-35px 0 0 -35px; z-index:7; animation:burst .4s ease-out forwards;
+    background:conic-gradient(from 0deg,#fff 0 8deg,transparent 8deg 30deg,#ffd166 30deg 38deg,transparent 38deg 60deg,#fff 60deg 68deg,transparent 68deg 90deg,#ffd166 90deg 98deg,transparent 98deg 120deg,#fff 120deg 128deg,transparent 128deg 150deg,#ffd166 150deg 158deg,transparent 158deg 180deg,#fff 180deg 188deg,transparent 188deg 210deg,#ffd166 210deg 218deg,transparent 218deg 240deg,#fff 240deg 248deg,transparent 248deg 270deg,#ffd166 270deg 278deg,transparent 278deg 300deg,#fff 300deg 308deg,transparent 308deg 330deg,#ffd166 330deg 338deg,transparent 338deg);
+    -webkit-mask:radial-gradient(circle,transparent 8px,#000 9px,#000 33px,transparent 35px); mask:radial-gradient(circle,transparent 8px,#000 9px,#000 33px,transparent 35px); }
+  .burst.big { width:120px; height:120px; margin:-60px 0 0 -60px; -webkit-mask:radial-gradient(circle,transparent 12px,#000 13px,#000 58px,transparent 60px); mask:radial-gradient(circle,transparent 12px,#000 13px,#000 58px,transparent 60px); }
+  @keyframes burst { 0%{ transform:scale(.3) rotate(0); opacity:1; } 100%{ transform:scale(1.35) rotate(40deg); opacity:0; } }
+  .slash { position:absolute; left:20%; top:12%; width:60%; height:70%; border-radius:50%; border:5px solid transparent; border-top-color:#fff; border-right-color:#cfe9ff; transform:rotate(-30deg); animation:slash .3s ease-out forwards; z-index:7; filter:drop-shadow(0 0 6px #7dd3fc); }
+  @keyframes slash { 0%{ transform:rotate(-70deg) scale(.6); opacity:0; } 40%{ opacity:1; } 100%{ transform:rotate(20deg) scale(1.1); opacity:0; } }
+  .beam { position:absolute; top:46%; height:12%; z-index:4; border-radius:99px; background:linear-gradient(90deg,#fff,#c154e6 40%,#836ef9); box-shadow:0 0 18px #c154e6,0 0 36px #836ef9; animation:beam .6s ease-out forwards; }
+  .beam.bp { left:34%; width:34%; transform-origin:left; } .beam.be { right:34%; width:34%; transform-origin:right; background:linear-gradient(270deg,#fff,#ff6bd6 40%,#e0457b); box-shadow:0 0 18px #ff6bd6,0 0 36px #e0457b; }
+  @keyframes beam { 0%{ transform:scaleX(0); opacity:1; } 55%{ transform:scaleX(1); opacity:1; } 100%{ transform:scaleX(1); opacity:0; } }
+  .shake { animation:shake .3s; } @keyframes shake { 0%,100%{ transform:translate(0); } 25%{ transform:translate(-4px,2px); } 50%{ transform:translate(4px,-2px); } 75%{ transform:translate(-3px,-1px); } }
+  .banner { position:absolute; left:0; right:0; top:34%; text-align:center; font-weight:900; font-size:34px; letter-spacing:.1em; color:#fff; text-shadow:0 0 18px #e0457b, 0 3px 0 #000; animation:banner 1.6s ease-out forwards; pointer-events:none; z-index:6; }
   @keyframes banner { 0%{ transform:scale(2.2); opacity:0; } 20%{ transform:scale(1); opacity:1; } 80%{ opacity:1; } 100%{ opacity:0; } }
   .moves { display:grid; grid-template-columns:1fr 1.3fr 1fr; gap:8px; margin:12px 0 8px; }
   .moves button { padding:10px 6px; min-height:58px; line-height:1.2; border-radius:12px; font-weight:700; }
@@ -100,7 +142,7 @@
   .result h2 { margin:4px 0; font-size:26px; } .result .big { font-size:34px; font-weight:900; color:var(--gold); }
   .result .row { justify-content:center; margin-top:10px; }
   .kv { display:flex; justify-content:center; gap:18px; flex-wrap:wrap; color:var(--mute); font-size:14px; margin-top:6px; } .kv b { color:var(--ink); }
-  @media (prefers-reduced-motion: reduce) { .tear, .mood-cry .portrait .art, .mood-win .portrait .art, .float, .banner { animation:none; } .tear { opacity:.9; } }
+  @media (prefers-reduced-motion: reduce) { .stagebox .portrait, .scene .cloud, .tear, .mood-cry .portrait .art, .mood-win .portrait .art, .float, .banner { animation:none; } .tear { opacity:.9; } }
 </style>
 </head>
 <body>
@@ -148,7 +190,7 @@
       <div><b id="hudTitle">Stage 1</b> <span id="hudBoss" class="bossb hidden">BOSS</span></div>
       <div class="row"><span class="pill" id="hudScore">Score 0</span><span class="pill" id="hudBest"></span><button class="ghost" id="quit" style="min-height:34px;padding:4px 10px;font-size:13px">Quit</button></div>
     </div>
-    <div class="arena" id="arena"></div>
+    <div class="scene" id="arena"></div>
     <div class="moves">
       <button id="mAtk">Attack<small>reliable hit</small></button>
       <button id="mSp">Special<small id="spName"></small></button>
@@ -278,20 +320,28 @@ $('load').onclick = async () => {
 
 // ---------- the game ----------
 const sideKey = { player: 'p', enemy: 'e' };
-const fighterHTML = (side, f, isBoss) => {
-  const img = f.nft.image ? `<img src="${esc(f.nft.image)}" alt="" decoding="async" onload="this.style.opacity=1" onerror="this.remove()">` : '';
-  const b = f.brain;
-  return `<div class="fighter ${side}" id="f-${side}">
-    <div class="fname"><b>Chog #${esc(f.id)}</b>${f.level ? ` <span class="lv">Lv ${f.level}</span>` : ''}${isBoss && side === 'e' ? ' <span class="bossb">BOSS</span>' : ''}</div>
-    <div class="hp"><i id="hp-${side}"></i><span id="hpt-${side}"></span></div>
+const faceHTML = (f) => `<div class="ph">${f.art.placeholder}</div>${f.nft.image ? `<img src="${esc(f.nft.image)}" alt="" decoding="async" onload="this.style.opacity=1" onerror="this.remove()">` : ''}`;
+const hudHTML = (side, f, isBoss) => `<div class="hudbar ${side}">
+    <div class="face">${faceHTML(f)}</div>
+    <div class="meta"><div class="hname">Chog #${esc(f.id)}${f.level ? ' · Lv ' + f.level : ''}${isBoss && side === 'e' ? ' · BOSS' : ''}</div>
+    <div class="hp"><i id="hp-${side}"></i><span id="hpt-${side}"></span></div></div></div>`;
+const spriteHTML = (side, f) => `<div class="sprite ${side}" id="f-${side}">
     <div class="stagebox" id="sb-${side}">
-      <div class="portrait"><div class="art" style="position:absolute;inset:0"><div class="ph" id="ph-${side}">${f.art.placeholder}</div>${img}</div><div class="tears"><i class="tear"></i><i class="tear"></i><i class="tear"></i><i class="tear"></i></div></div>
+      <div class="portrait"><div class="art" style="position:absolute;inset:0"><div class="ph" id="ph-${side}">${f.art.placeholder}</div>${f.nft.image ? `<img src="${esc(f.nft.image)}" alt="Chog #${esc(f.id)}" decoding="async" onload="this.style.opacity=1" onerror="this.remove()">` : ''}</div><div class="tears"><i class="tear"></i><i class="tear"></i><i class="tear"></i><i class="tear"></i></div></div>
       <div class="sword ${f.art.sword.glow ? 'glow' : ''}">${f.art.sword.svg}</div>
       <div class="fx" id="fx-${side}"></div>
-    </div>
-    <div class="mini"><span>⚔ ${b.stats.power}</span><span>⚡ ${b.stats.speed}</span><span>✨ ${b.stats.charm}</span><span>🍀 ${b.stats.luck}</span></div>
-  </div>`;
-};
+    </div></div>`;
+const SCENERY = `<div class="cloud c1"></div><div class="cloud c2"></div>
+  <svg class="mtn" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
+    <polygon fill="var(--m1)" points="0,120 0,64 36,38 70,70 118,16 172,78 226,30 290,82 342,42 400,68 400,120"/>
+    <polygon fill="var(--m2)" points="0,120 0,96 56,70 118,94 196,64 272,92 338,72 400,94 400,120"/>
+  </svg><div class="ground"></div>`;
+function sceneHTML(d) {
+  const theme = d.boss ? 'theme-boss' : 'theme-' + ((d.stage - 1) % 4);
+  const tag = d.mode === 'daily' ? 'DAILY BOSS' : (d.boss ? 'BOSS · STAGE ' + d.stage : 'STAGE ' + d.stage);
+  $('arena').className = 'scene ' + theme;
+  return SCENERY + `<div class="stagetag ${d.boss ? 'bossed' : ''}">${tag}</div>` + hudHTML('p', d.player, false) + hudHTML('e', d.enemy, d.boss) + spriteHTML('p', d.player) + spriteHTML('e', d.enemy);
+}
 
 function setHp(side, hp, max) {
   const pct = Math.max(0, Math.min(100, (hp / max) * 100));
@@ -305,6 +355,9 @@ function floatText(side, text, cls) {
   const d = document.createElement('div'); d.className = 'float ' + cls; d.textContent = text; $('fx-' + side).appendChild(d); setTimeout(() => d.remove(), 1000);
 }
 function pulse(el, cls, ms) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); setTimeout(() => el.classList.remove(cls), ms); }
+function burst(side, big) { const d = document.createElement('div'); d.className = 'burst' + (big ? ' big' : ''); $('fx-' + side).appendChild(d); setTimeout(() => d.remove(), 450); }
+function slash(side) { const d = document.createElement('div'); d.className = 'slash'; $('fx-' + side).appendChild(d); setTimeout(() => d.remove(), 350); }
+function beam(from) { const d = document.createElement('div'); d.className = 'beam b' + from; $('arena').appendChild(d); setTimeout(() => d.remove(), 650); }
 function cryOn(side) {
   const f = $('f-' + side); f.classList.add('mood-cry', 'dead');
   const d = battle[side === 'p' ? 'player' : 'enemy'];
@@ -333,7 +386,7 @@ async function startStage(mode, stage, hp) {
   const d = await api('/api/stage?' + q);
   battle = { ...d, busy: false, over: false };
   $('lobby').classList.add('hidden'); $('battle').classList.remove('hidden'); $('result').classList.add('hidden'); $('result').innerHTML = '';
-  $('arena').innerHTML = fighterHTML('p', d.player, false) + fighterHTML('e', d.enemy, d.boss);
+  $('arena').innerHTML = sceneHTML(d);
   $('log').innerHTML = '';
   setHp('p', d.state.p.hp, d.state.p.max); setHp('e', d.state.e.hp, d.state.e.max);
   drawHud(); updateMoves(true);
@@ -353,11 +406,13 @@ async function play(events) {
       if (ev.heal) floatText(w, '+' + ev.heal, 'heal');
       logLine(`${nameOf(w)} guards.`);
     } else if (ev.type === 'miss') {
-      pulse($('sb-' + w), 'lunge-' + w, 220); sfx.dodge(); floatText(o, 'MISS', 'miss');
+      pulse($('f-' + w), 'lunge-' + w, 240); sfx.dodge(); floatText(o, 'MISS', 'miss');
       logLine(`${nameOf(w)} used ${ev.move === 'special' ? (battle[w === 'p' ? 'player' : 'enemy'].brain.signatureMove) : 'attack'}... and missed!`);
     } else if (ev.type === 'hit') {
-      pulse($('sb-' + w), 'lunge-' + w, 240); await wait(170);
+      pulse($('f-' + w), 'lunge-' + w, 260); await wait(190);
       ev.move === 'special' ? sfx.special() : ev.crit ? sfx.crit() : sfx.hit();
+      if (ev.move === 'special') { beam(w); await wait(260); pulse($('arena'), 'shake', 320); }
+      burst(o, ev.move === 'special' || ev.crit); slash(o);
       pulse($('f-' + o), 'hurt', 360);
       floatText(o, '-' + ev.dmg, ev.crit ? 'crit' : '');
       if (ev.blocked) floatText(o, 'BLOCK', 'block');
@@ -365,7 +420,7 @@ async function play(events) {
       const nm = ev.move === 'special' ? battle[w === 'p' ? 'player' : 'enemy'].brain.signatureMove : 'a strike';
       logLine(`${nameOf(w)} lands ${nm} for ${ev.dmg}${ev.crit ? ' (CRIT!)' : ''}${ev.blocked ? ', mostly blocked' : ''}.`);
     } else if (ev.type === 'counter') {
-      sfx.clash(); pulse($('sb-' + w), 'lunge-' + w, 220); floatText(o, '-' + ev.dmg, ''); logLine(`${nameOf(w)} counters for ${ev.dmg}!`);
+      sfx.clash(); pulse($('f-' + w), 'lunge-' + w, 240); floatText(o, '-' + ev.dmg, ''); logLine(`${nameOf(w)} counters for ${ev.dmg}!`);
     }
     setHp('p', ev.hp.p, battle.state.p.max); setHp('e', ev.hp.e, battle.state.e.max);
     await wait(650);
