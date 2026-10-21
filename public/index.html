@@ -67,9 +67,9 @@
   .hud b { font-size:18px; } .pill { font-size:12px; background:#120e24; border:1px solid var(--line); border-radius:99px; padding:3px 10px; color:var(--mute); }
   .bossb { font-size:11px; font-weight:700; background:#e0457b; color:#fff; border-radius:6px; padding:1px 6px; vertical-align:middle; }
   /* side-view arena scene */
-  .scene { position:relative; width:100%; aspect-ratio:16/11; overflow:hidden; border-radius:14px; border:3px solid #0b0816; box-shadow:0 0 0 2px var(--line);
+  .scene { position:relative; width:100%; aspect-ratio:16/10; overflow:hidden; border-radius:14px; border:3px solid #0b0816; box-shadow:0 0 0 2px var(--line);
     --s1:#5db8f5; --s2:#d9f2ff; --m1:#86b97a; --m2:#5f9a58; --g1:#63c24f; --g2:#8c6a3c; background:linear-gradient(var(--s1), var(--s2) 70%); image-rendering:pixelated; }
-  @media (max-width:560px) { .scene { aspect-ratio:10/9; } }
+  @media (max-width:560px) { .scene { aspect-ratio:10/8.4; } .sprite { width:clamp(84px,27%,140px); } }
   .scene.theme-1 { --s1:#ff8a4c; --s2:#ffe0a3; --m1:#b5607a; --m2:#8a4565; --g1:#9bb544; --g2:#7a4a35; }
   .scene.theme-2 { --s1:#14123f; --s2:#4a3a9a; --m1:#2d2c72; --m2:#221f5c; --g1:#4f9a74; --g2:#3b2c52; }
   .scene.theme-3 { --s1:#ff7fcf; --s2:#ffe6f4; --m1:#c58ad8; --m2:#9a63b8; --g1:#6bd0a8; --g2:#7a5a7a; }
@@ -83,12 +83,14 @@
   .scene .ground { position:absolute; left:0; right:0; bottom:0; height:26%; background:linear-gradient(var(--g1) 0 16%, var(--g2) 16%); border-top:3px solid #0004; }
   .scene .ground:before { content:""; position:absolute; left:0; right:0; top:-11px; height:12px; background:radial-gradient(circle at 9px 12px, var(--g1) 7px, transparent 8px) 0 0/18px 12px repeat-x; }
   .scene .ground:after { content:""; position:absolute; inset:16% 0 0 0; background:repeating-linear-gradient(90deg,#0003 0 2px,transparent 2px 26px),repeating-linear-gradient(0deg,#0002 0 2px,transparent 2px 22px); }
-  .stagetag { position:absolute; top:62px; left:0; right:0; text-align:center; font:800 12px ui-monospace,Menlo,monospace; letter-spacing:.25em; color:#fff; text-shadow:0 2px 0 #000a; z-index:4; }
+  .bigscore { position:absolute; top:84px; left:0; right:0; text-align:center; font:900 20px ui-monospace,Menlo,monospace; color:#ffd166; letter-spacing:.06em; text-shadow:-2px 0 #7a3b00,2px 0 #7a3b00,0 -2px #7a3b00,0 2px #7a3b00; z-index:5; }
+  .stagetag { position:absolute; top:64px; left:0; right:0; text-align:center; font:800 12px ui-monospace,Menlo,monospace; letter-spacing:.25em; color:#fff; text-shadow:0 2px 0 #000a; z-index:4; }
   .stagetag.bossed { color:#ffb3c9; }
   .hudbar { position:absolute; top:8px; width:46%; display:flex; align-items:center; gap:6px; z-index:5; }
   .hudbar.p { left:8px; } .hudbar.e { right:8px; flex-direction:row-reverse; }
   .hudbar .face { position:relative; width:46px; height:46px; border-radius:50%; border:3px solid #fff; background:#120e24; overflow:hidden; flex:none; box-shadow:0 2px 0 #0008; }
   .hudbar .face .ph { position:absolute; inset:0; padding:4px; } .hudbar .face .ph svg { width:100%; height:100%; }
+  .fig .portrait.head img, .hudbar .face img { image-rendering:pixelated; }
   .hudbar .face img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity .3s; }
   .hudbar .meta { flex:1; min-width:0; }
   .hname { font:800 11px ui-monospace,Menlo,monospace; letter-spacing:.08em; color:#fff; text-shadow:-1px 0 #000,1px 0 #000,0 -1px #000,0 1px #000; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -97,8 +99,8 @@
   .hp i { position:absolute; inset:0 auto 0 0; width:100%; background:var(--ok); transition:width .5s ease, background .3s; }
   .hudbar.e .hp i { inset:0 0 0 auto; }
   .hp span { position:absolute; inset:0; text-align:center; font-size:11px; line-height:12px; font-weight:800; color:#fff; text-shadow:0 1px 2px #000; }
-  .sprite { position:absolute; bottom:19%; width:30%; z-index:3; }
-  .sprite.p { left:9%; } .sprite.e { right:9%; }
+  .sprite { position:absolute; bottom:19%; width:clamp(88px,22%,140px); z-index:3; }
+  .sprite.p { left:12%; } .sprite.e { right:12%; }
   .sprite:after { content:""; position:absolute; left:6%; right:6%; bottom:-9px; height:11px; background:#0007; border-radius:50%; filter:blur(2px); z-index:-1; }
   .stagebox { position:relative; transition:transform .2s ease-out; }
   .stagebox .portrait { width:100%; height:auto; aspect-ratio:1/1; border-radius:14px; border:3px solid #fff; box-shadow:0 5px 0 #0006; animation:bob 1.8s ease-in-out infinite; }
@@ -378,11 +380,16 @@ $('load').onclick = async () => {
 
 // ---------- the game ----------
 const sideKey = { player: 'p', enemy: 'e' };
-const faceHTML = (f) => `<div class="ph">${f.art.placeholder}</div>${f.nft.image ? `<img src="${esc(f.nft.image)}" alt="" decoding="async" onload="this.style.opacity=1" onerror="this.remove()">` : ''}`;
+const faceHTML = (f) => `<div class="ph">${f.art.placeholder}</div>${f.nft.image ? `<img src="${esc(f.nft.image)}" alt="" decoding="async" onload="this.style.opacity=1;pixelate(this)" onerror="this.remove()">` : ''}`;
 const hudHTML = (side, f, isBoss) => `<div class="hudbar ${side}">
     <div class="face">${faceHTML(f)}</div>
     <div class="meta"><div class="hname">Chog #${esc(f.id)}${f.level ? ' · Lv ' + f.level : ''}${isBoss && side === 'e' ? ' · BOSS' : ''}</div>
     <div class="hp"><i id="hp-${side}"></i><span id="hpt-${side}"></span></div></div></div>`;
+// Retro look: redraw the NFT at 44x44 and scale it up with hard pixels. Same-origin image, so the canvas stays clean.
+function pixelate(img) {
+  if (img.dataset.px) return; img.dataset.px = '1';
+  try { const n = 44, c = document.createElement('canvas'); c.width = c.height = n; c.getContext('2d').drawImage(img, 0, 0, n, n); img.src = c.toDataURL('image/png'); } catch { /* keep the smooth image */ }
+}
 const hashStr = (str) => { let h = 2166136261; for (const c of String(str)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
 // Body colours come from the token's own traits, so every Chog gets its own outfit.
 function outfit(f) {
@@ -396,19 +403,19 @@ const spriteHTML = (side, f) => `<div class="sprite ${side} ${f.art.sword.glow ?
       <div class="arm back"><div class="sword ${f.art.sword.glow ? 'glow' : ''}">${f.art.sword.svg}</div><i class="glove"></i></div>
       <div class="torso"></div>
       <div class="arm front"><i class="glove"></i></div>
-      <div class="portrait head"><div class="art" style="position:absolute;inset:0"><div class="ph" id="ph-${side}">${f.art.placeholder}</div>${f.nft.image ? `<img src="${esc(f.nft.image)}" alt="Chog #${esc(f.id)}" decoding="async" onload="this.style.opacity=1" onerror="this.remove()">` : ''}</div><div class="tears"><i class="tear"></i><i class="tear"></i><i class="tear"></i><i class="tear"></i></div></div>
+      <div class="portrait head"><div class="art" style="position:absolute;inset:0"><div class="ph" id="ph-${side}">${f.art.placeholder}</div>${f.nft.image ? `<img src="${esc(f.nft.image)}" alt="Chog #${esc(f.id)}" decoding="async" onload="this.style.opacity=1;pixelate(this)" onerror="this.remove()">` : ''}</div><div class="tears"><i class="tear"></i><i class="tear"></i><i class="tear"></i><i class="tear"></i></div></div>
     </div>
     <div class="fx" id="fx-${side}"></div></div></div>`;
 const SCENERY = `<div class="cloud c1"></div><div class="cloud c2"></div>
-  <svg class="mtn" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
-    <polygon fill="var(--m1)" points="0,120 0,64 36,38 70,70 118,16 172,78 226,30 290,82 342,42 400,68 400,120"/>
-    <polygon fill="var(--m2)" points="0,120 0,96 56,70 118,94 196,64 272,92 338,72 400,94 400,120"/>
+  <svg class="mtn" viewBox="0 0 400 120" preserveAspectRatio="none" shape-rendering="crispEdges" aria-hidden="true">
+    <polygon fill="var(--m1)" points="0,120 0,70 30,70 30,56 60,56 60,40 100,40 100,22 150,22 150,44 190,44 190,62 230,62 230,34 280,34 280,18 320,18 320,50 360,50 360,64 400,64 400,120"/>
+    <polygon fill="var(--m2)" points="0,120 0,92 50,92 50,78 110,78 110,92 170,92 170,70 230,70 230,86 300,86 300,72 360,72 360,90 400,90 400,120"/>
   </svg><div class="ground"></div>`;
 function sceneHTML(d) {
   const theme = d.boss ? 'theme-boss' : 'theme-' + ((d.stage - 1) % 4);
   const tag = d.mode === 'daily' ? 'DAILY BOSS' : (d.boss ? 'BOSS · STAGE ' + d.stage : 'STAGE ' + d.stage);
   $('arena').className = 'scene ' + theme;
-  return SCENERY + `<div class="stagetag ${d.boss ? 'bossed' : ''}">${tag}</div>` + hudHTML('p', d.player, false) + hudHTML('e', d.enemy, d.boss) + spriteHTML('p', d.player) + spriteHTML('e', d.enemy);
+  return SCENERY + `<div class="bigscore" id="bigScore">${battle && battle.mode === 'daily' ? '' : String(run.score).padStart(4, '0')}</div><div class="stagetag ${d.boss ? 'bossed' : ''}">${tag}</div>` + hudHTML('p', d.player, false) + hudHTML('e', d.enemy, d.boss) + spriteHTML('p', d.player) + spriteHTML('e', d.enemy);
 }
 
 function setHp(side, hp, max) {
@@ -533,7 +540,7 @@ async function endBattle(out) {
 
   if (battle.mode === 'arena' && won) {
     run.cleared = battle.stage; run.score += out.score;
-    $('hudScore').textContent = 'Score ' + run.score;
+    $('hudScore').textContent = 'Score ' + run.score; if ($('bigScore')) $('bigScore').textContent = String(run.score).padStart(4, '0');
     const nextIsBoss = (battle.stage + 1) % 5 === 0;
     R.innerHTML = `<div class="big">Stage ${battle.stage} cleared!</div><div class="kv"><span>+<b>${out.score}</b> pts</span><span>HP restored to <b>${out.nextHp}</b>/${out.state.p.max}</span></div>
       <p class="sub" style="margin:8px 0 0">${nextIsBoss ? 'Next up: a BOSS.' : 'Chog #' + battle.enemy.id + ' is crying. Next opponent incoming.'}</p>
