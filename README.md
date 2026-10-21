@@ -17,15 +17,6 @@ See `.env.example` for optional settings. Demo mode works with any token id 0-19
 that owns the token for onchain-verified play. If the Monad RPC or metadata host can't be reached,
 the app falls back to seeded traits and says why on screen.
 
-## Rage Bait Brawl
-
-Open `/brawl.html` (or the button on the home page). Two Chogs fight 6-8 rounds and trash-talk each other in a
-16:9 stage built for screen recording. Lines come from `POST /api/brawl`: Claude writes them on the server
-(same `ANTHROPIC_API_KEY`, never sent to the browser); with no key, or if a line is too long or unsafe, a
-canned line is used. Voices use the browser's `speechSynthesis` (pitch, rate and voice picked from the traits),
-so no key is needed. Sounds (punch, hit, whoosh, crowd, ding, KO) are synthesized with Web Audio, so there are no
-audio files or licences to credit. There are no pain or crying sounds.
-
 ## Deploy on Vercel
 
 1. Push this repo to GitHub.
@@ -36,6 +27,17 @@ audio files or licences to credit. There are no pain or crying sounds.
    `KV_REST_API_URL` and `KV_REST_API_TOKEN` itself; this makes XP and levels permanent.
    Without it the app still works, but progress resets when the server restarts.
 5. Redeploy so the new variables are picked up.
+
+## How to play
+
+- **Arena run:** pick a Chog and fight one Chog after another. Each turn you choose Attack, Special (your
+  Chog's signature move, 3-turn cooldown) or Guard (block most damage, heal a little, maybe counter).
+  Opponents get tougher each stage and every 5th stage is a boss. You heal 60% between stages.
+  Win streaks score points, and your best stage and score are saved to the token.
+- **Daily boss:** one attempt per Chog per UTC day against a boss that is the same for everyone.
+- **Narrated duel:** an automatic fight narrated by Claude. The loser cries.
+
+Every fight is refereed by the server (`lib/battle.js`), so the client can't invent health or skip cooldowns.
 
 ## How the NFT is essential
 

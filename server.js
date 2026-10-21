@@ -5,8 +5,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import { buildBrain, normalizeTraits, runDuel, templateNarration } from './lib/brain.js';
 import { loadChog, ownerOf, chainStatus, fetchImage, snapshotSize, MAX_ID, CHOG_CONTRACT } from './lib/chain.js';
 import { artFor } from './lib/art.js';
-import { planBrawl, writeScript, voiceFor } from './lib/brawl.js';
 import { createStore } from './lib/store.js';
+import { resolveTurn, newState, scaleEnemy, pickOpponent, carryHp, stageScore, isBossStage, MOVES } from './lib/battle.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
@@ -15,24 +15,34 @@ const llm = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
 // Progression is keyed by token ID (the NFT is the save file). See lib/store.js.
 const store = createStore({ defaultFile: path.join(__dirname, 'data.json') });
 const today = () => new Date().toISOString().slice(0, 10);
-const blank = () => ({ xp: 0, wins: 0, losses: 0, lastRun: null, memory: [] });
+const blank = () => ({ xp: 0, wins: 0, losses: 0, lastRun: null, lastDaily: null, bestStage: 0, bestScore: 0, runs: 0, memory: [] });
 const levelOf = (xp) => 1 + Math.floor(Math.sqrt(xp / 20));
 
 function validId(v) {
   const n = Number(v);
-  return Number.isInteger(n) && n >= 0 && n <= MAX_ID ? String(n) : null;
+  return Number.isInteger(n) && n >= 1 && n <= MAX_ID ? String(n) : null;
 }
 
 async function fullChog(id, opts) {
   const nft = await loadChog(id, opts);
   const brain = buildBrain(id, normalizeTraits(nft.attributes));
-  const st = (await store.get(id)) || blank();
+  const st = { ...blank(), ...((await store.get(id)) || {}) };
   // Progression feeds back into the brain: levels add flat stats.
   const lvl = levelOf(st.xp);
   for (const k of Object.keys(brain.stats)) brain.stats[k] += lvl - 1;
   brain.hp += (lvl - 1) * 4;
   return { nft, brain, progress: { ...st, level: lvl } };
 }
+
+// Opponents are fought at their base strength (no progression), so fights stay fair.
+async function baseChog(id) {
+  const nft = await loadChog(id);
+  return { nft, brain: buildBrain(id, normalizeTraits(nft.attributes)) };
+}
+
+const publicNft = (id, nft) => ({ name: nft.name, source: nft.source, reason: nft.reason, image: nft.imageRaw ? `/api/chog/${id}/image` : null });
+const fighterOut = (id, nft, brain, extra = {}) => ({ id, nft: publicNft(id, nft), brain, art: artFor(brain), ...extra });
+const num = (v, lo, hi, d) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
 
 async function narrate(a, b, duel) {
   if (!llm) return { text: templateNarration(a, b, duel), by: 'template' };
@@ -68,12 +78,12 @@ app.get('/api/health', async (_req, res) =>
 
 app.get('/api/chog/:id', async (req, res) => {
   const id = validId(req.params.id);
-  if (!id) return res.status(400).json({ error: `token id must be 0-${MAX_ID}` });
+  if (!id) return res.status(400).json({ error: `token id must be 1-${MAX_ID}` });
   const { nft, brain, progress } = await fullChog(id);
   // The browser loads the art through our own route, so it never depends on an IPFS gateway.
   const out = { ...nft, image: nft.imageRaw ? `/api/chog/${id}/image` : null };
   delete out.imageRaw;
-  res.json({ nft: out, brain, progress, art: artFor(brain) });
+  res.json({ nft: out, brain, progress, art: artFor(brain), today: today() });
 });
 
 app.get('/api/chog/:id/image', async (req, res) => {
@@ -119,35 +129,10 @@ app.post('/api/duel', async (req, res) => {
   res.json({ a: A.brain, b: B.brain, duel, narration: story.text, narratedBy: story.by });
 });
 
-// Rage Bait Brawl: a 6-8 round fight with trash talk per round. The AI key stays on the server;
-// without it (or if the model misbehaves) canned lines are used. No XP is awarded for brawls.
-app.post('/api/brawl', async (req, res) => {
-  const a = validId(req.body?.a);
-  const b = validId(req.body?.b);
-  if (!a || !b || a === b) return res.status(400).json({ error: 'two different valid token ids required' });
-  const nonce = String(req.body?.nonce || '').replace(/[^a-z0-9]/gi, '').slice(0, 16);
-  const [A, B] = await Promise.all([fullChog(a), fullChog(b)]);
-  const plan = planBrawl(A.brain, B.brain, nonce || today());
-  const script = await writeScript(llm, A.brain, B.brain, plan, process.env.NARRATOR_MODEL || 'claude-haiku-5-5');
-  const va = voiceFor(A.brain);
-  const fighters = [[A, va], [B, voiceFor(B.brain, va)]].map(([f, voice]) => ({
-    id: f.brain.tokenId,
-    temperament: f.brain.personality.temperament,
-    quirk: f.brain.personality.quirk,
-    signatureMove: f.brain.signatureMove,
-    background: f.brain.traits.Background || null,
-    hp: f.brain.hp,
-    image: f.nft.imageRaw ? `/api/chog/${f.brain.tokenId}/image` : null,
-    placeholder: artFor(f.brain).placeholder,
-    voice,
-  }));
-  res.json({ fighters, winner: plan.winner, rounds: script.rounds, taunt: script.taunt, by: script.by });
-});
-
 // Daily expedition: one per Chog per UTC day. Outcome depends on the brain.
 app.post('/api/expedition/:id', async (req, res) => {
   const id = validId(req.params.id);
-  if (!id) return res.status(400).json({ error: `token id must be 0-${MAX_ID}` });
+  if (!id) return res.status(400).json({ error: `token id must be 1-${MAX_ID}` });
   const s = (await store.get(id)) || blank();
   if (s.lastRun === today()) return res.status(429).json({ error: 'already ran today', next: 'tomorrow (UTC)' });
   const { brain } = await fullChog(id);
@@ -159,6 +144,95 @@ app.post('/api/expedition/:id', async (req, res) => {
   s.memory = [...s.memory, `${today()}: expedition, found ${finds[roll]}`].slice(-10);
   await store.set(id, s);
   res.json({ found: finds[roll], xpGained: gain, level: levelOf(s.xp), temperament: brain.personality.temperament });
+});
+
+
+// ---------- Game mode: arena ladder and daily boss ----------
+const modeOf = (m) => (m === 'daily' ? 'daily' : m === 'arena' ? 'arena' : null);
+const seedOf = (mode, player, stage) => `${mode}:${today()}:${player}:${stage}`;
+
+// Start a fight. Arena: stage N of your run. Daily: today's boss, one attempt per Chog per UTC day.
+app.get('/api/stage', async (req, res) => {
+  const player = validId(req.query.player);
+  const mode = modeOf(req.query.mode);
+  if (!player || !mode) return res.status(400).json({ error: 'player and mode (arena|daily) required' });
+  const stage = mode === 'daily' ? 1 : num(req.query.stage, 1, 999, 1);
+  const P = await fullChog(player);
+  if (mode === 'daily') {
+    if (P.progress.lastDaily === today()) return res.status(429).json({ error: 'Daily boss already fought today. Come back tomorrow (UTC).' });
+    await store.set(player, { ...P.progress, level: undefined, lastDaily: today() });
+  }
+  const enemyId = pickOpponent(player, stage, today(), mode, MAX_ID);
+  const E = await baseChog(enemyId);
+  const enemy = scaleEnemy(E.brain, stage, { daily: mode === 'daily' });
+  const startHp = mode === 'arena' && stage > 1 ? num(req.query.hp, 1, P.brain.hp, P.brain.hp) : P.brain.hp;
+  res.json({
+    mode, stage, boss: enemy.boss, seed: seedOf(mode, player, stage), today: today(),
+    player: fighterOut(player, P.nft, P.brain, { level: P.progress.level }),
+    enemy: fighterOut(enemyId, E.nft, enemy),
+    state: newState(startHp, P.brain.hp, enemy.hp),
+    best: { stage: P.progress.bestStage, score: P.progress.bestScore },
+  });
+});
+
+// The server referees every round: you pick a move, it resolves your move and the enemy's reply.
+app.post('/api/turn', async (req, res) => {
+  const player = validId(req.body?.player);
+  const mode = modeOf(req.body?.mode);
+  const move = String(req.body?.move || '');
+  const s = req.body?.state;
+  if (!player || !mode || !MOVES.includes(move) || !s?.p || !s?.e) return res.status(400).json({ error: 'player, mode, move and state required' });
+  const stage = mode === 'daily' ? 1 : num(req.body.stage, 1, 999, 1);
+  const P = await fullChog(player);
+  const enemyId = pickOpponent(player, stage, today(), mode, MAX_ID);
+  const E = await baseChog(enemyId);
+  const enemy = scaleEnemy(E.brain, stage, { daily: mode === 'daily' });
+  // Clamp the client's state to legal values so it can't invent health or skip cooldowns.
+  const state = {
+    round: num(s.round, 0, 29, 0),
+    p: { hp: num(s.p.hp, 1, P.brain.hp, P.brain.hp), max: P.brain.hp, cd: num(s.p.cd, 0, 4, 0) },
+    e: { hp: num(s.e.hp, 1, enemy.hp, enemy.hp), max: enemy.hp, cd: num(s.e.cd, 0, 4, 0) },
+  };
+  try {
+    const out = resolveTurn(P.brain, enemy, state, move, seedOf(mode, player, stage));
+    const result = { ...out };
+    if (out.over && out.winner === 'player' && mode === 'arena') {
+      result.score = stageScore(stage, out.state.p.hp / out.state.p.max, out.state.round);
+      result.nextHp = carryHp(out.state.p.hp, out.state.p.max);
+    }
+    res.json(result);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// End of a run (arena) or of the boss fight (daily): pay out XP, wins/losses and personal bests.
+app.post('/api/finish', async (req, res) => {
+  const player = validId(req.body?.player);
+  const mode = modeOf(req.body?.mode);
+  if (!player || !mode) return res.status(400).json({ error: 'player and mode required' });
+  const cleared = num(req.body.cleared, 0, 999, 0);
+  const score = num(req.body.score, 0, 1_000_000, 0);
+  const won = !!req.body.won;
+  const s = { ...blank(), ...((await store.get(player)) || {}) };
+  delete s.level;
+  let xp = 0;
+  if (mode === 'arena') {
+    xp = cleared * 25;
+    s.runs += 1;
+    if (cleared > s.bestStage) s.bestStage = cleared;
+    if (score > s.bestScore) s.bestScore = score;
+    s.wins += cleared;
+    s.losses += 1;
+    s.memory = [...s.memory, `${today()}: arena run, cleared ${cleared} stages (${score} pts)`].slice(-10);
+  } else {
+    xp = won ? 60 : 15;
+    won ? (s.wins += 1) : (s.losses += 1);
+    s.memory = [...s.memory, `${today()}: daily boss, ${won ? 'beat it' : 'lost'}`].slice(-10);
+  }
+  s.xp += xp;
+  await store.set(player, s);
+  res.json({ xpGained: xp, level: levelOf(s.xp), xp: s.xp, bestStage: s.bestStage, bestScore: s.bestScore, newBest: mode === 'arena' && cleared >= s.bestStage && cleared > 0 });
 });
 
 // Any unexpected error becomes a clean JSON response instead of an HTML error page.
